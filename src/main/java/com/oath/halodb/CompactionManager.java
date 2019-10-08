@@ -7,7 +7,6 @@ package com.oath.halodb;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.RateLimiter;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,20 +18,15 @@ import java.util.concurrent.locks.ReentrantLock;
 
 class CompactionManager {
     private static final Logger logger = LoggerFactory.getLogger(CompactionManager.class);
-
-    private  final HaloDBInternal dbInternal;
-
-    private volatile boolean isRunning = false;
-
+    private static final int STOP_SIGNAL = -10101;
+    private final HaloDBInternal dbInternal;
     private final RateLimiter compactionRateLimiter;
-
+    private final BlockingQueue<Integer> compactionQueue;
+    private final ReentrantLock startStopLock = new ReentrantLock();
+    private volatile boolean isRunning = false;
     private volatile HaloDBFile currentWriteFile = null;
     private int currentWriteFileOffset = 0;
-
-    private final BlockingQueue<Integer> compactionQueue;
-
     private volatile CompactionThread compactionThread;
-
     private volatile long numberOfRecordsCopied = 0;
     private volatile long numberOfRecordsReplaced = 0;
     private volatile long numberOfRecordsScanned = 0;
@@ -40,10 +34,6 @@ class CompactionManager {
     private volatile long sizeOfFilesDeleted = 0;
     private volatile long totalSizeOfRecordsCopied = 0;
     private volatile long compactionStartTime = System.currentTimeMillis();
-
-    private static final int STOP_SIGNAL = -10101;
-
-    private final ReentrantLock startStopLock = new ReentrantLock();
     private volatile boolean stopInProgress = false;
 
     CompactionManager(HaloDBInternal dbInternal) {
@@ -70,12 +60,10 @@ class CompactionManager {
                     currentWriteFile.close();
                 }
             }
-        }
-        catch (InterruptedException e) {
+        } catch (InterruptedException e) {
             logger.error("Error while waiting for compaction thread to stop", e);
             return false;
-        }
-        finally {
+        } finally {
             stopInProgress = false;
             startStopLock.unlock();
         }
@@ -138,7 +126,7 @@ class CompactionManager {
     }
 
     long getCompactionJobRateSinceBeginning() {
-        long timeInSeconds = (System.currentTimeMillis() - compactionStartTime)/1000;
+        long timeInSeconds = (System.currentTimeMillis() - compactionStartTime) / 1000;
         long rate = 0;
         if (timeInSeconds > 0) {
             rate = totalSizeOfRecordsCopied / timeInSeconds;
@@ -148,11 +136,33 @@ class CompactionManager {
 
     void resetStats() {
         numberOfRecordsCopied = numberOfRecordsReplaced
-            = numberOfRecordsScanned = sizeOfRecordsCopied = sizeOfFilesDeleted = 0;
+                = numberOfRecordsScanned = sizeOfRecordsCopied = sizeOfFilesDeleted = 0;
     }
 
     boolean isCompactionRunning() {
         return compactionThread != null && compactionThread.isAlive();
+    }
+
+    // Used only for tests. to be called only after all writes in the test have been performed.
+    @VisibleForTesting
+    synchronized boolean isCompactionComplete() {
+
+        if (!isCompactionRunning())
+            return true;
+
+        if (compactionQueue.isEmpty()) {
+            try {
+                isRunning = false;
+                submitFileForCompaction(STOP_SIGNAL);
+                compactionThread.join();
+            } catch (InterruptedException e) {
+                logger.error("Error in isCompactionComplete", e);
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     private class CompactionThread extends Thread {
@@ -182,8 +192,7 @@ class CompactionManager {
                     } finally {
                         startStopLock.unlock();
                     }
-                }
-                else {
+                } else {
                     logger.info("Not restarting thread as the lock is held by stop compaction method.");
                 }
 
@@ -209,8 +218,7 @@ class CompactionManager {
                     logger.debug("Completed compacting {} to {}", fileToCompact, getCurrentWriteFileId());
                     dbInternal.markFileAsCompacted(fileToCompact);
                     dbInternal.deleteHaloDBFile(fileToCompact);
-                }
-                catch (Exception e) {
+                } catch (Exception e) {
                     logger.error(String.format("Error while compacting file %d to %d", fileToCompact, getCurrentWriteFileId()), e);
                 }
             }
@@ -225,7 +233,7 @@ class CompactionManager {
                 return;
             }
 
-            FileChannel readFrom =  fileToCompact.getChannel();
+            FileChannel readFrom = fileToCompact.getChannel();
             IndexFile.IndexFileIterator iterator = fileToCompact.getIndexFile().newIterator();
             long recordsCopied = 0, recordsScanned = 0;
 
@@ -255,28 +263,27 @@ class CompactionManager {
 
                     unFlushedData += transferred;
                     if (dbInternal.options.getFlushDataSizeBytes() != -1 &&
-                        unFlushedData > dbInternal.options.getFlushDataSizeBytes()) {
+                            unFlushedData > dbInternal.options.getFlushDataSizeBytes()) {
                         currentWriteFile.getChannel().force(false);
                         unFlushedData = 0;
                     }
 
                     IndexFileEntry newEntry = new IndexFileEntry(
-                        key, recordSize, currentWriteFileOffset,
-                        indexFileEntry.getSequenceNumber(), indexFileEntry.getVersion(), -1
+                            key, recordSize, currentWriteFileOffset,
+                            indexFileEntry.getSequenceNumber(), indexFileEntry.getVersion(), -1
                     );
                     currentWriteFile.getIndexFile().write(newEntry);
 
                     int valueOffset = Utils.getValueOffset(currentWriteFileOffset, key);
                     InMemoryIndexMetaData newMetaData = new InMemoryIndexMetaData(
-                        currentWriteFile.getFileId(), valueOffset,
-                        currentRecordMetaData.getValueSize(), indexFileEntry.getSequenceNumber()
+                            currentWriteFile.getFileId(), valueOffset,
+                            currentRecordMetaData.getValueSize(), indexFileEntry.getSequenceNumber()
                     );
 
                     boolean updated = dbInternal.getInMemoryIndex().replace(key, currentRecordMetaData, newMetaData);
                     if (updated) {
                         numberOfRecordsReplaced++;
-                    }
-                    else {
+                    } else {
                         // write thread wrote a new version while this version was being compacted.
                         // therefore, this version is stale.
                         dbInternal.addFileToCompactionQueueIfThresholdCrossed(currentWriteFile.getFileId(), recordSize);
@@ -301,12 +308,12 @@ class CompactionManager {
 
         private boolean isRecordFresh(IndexFileEntry entry, InMemoryIndexMetaData metaData, int idOfFileToMerge) {
             return metaData != null
-                   && metaData.getFileId() == idOfFileToMerge
-                   && metaData.getValueOffset() == Utils.getValueOffset(entry.getRecordOffset(), entry.getKey());
+                    && metaData.getFileId() == idOfFileToMerge
+                    && metaData.getValueOffset() == Utils.getValueOffset(entry.getRecordOffset(), entry.getKey());
         }
 
         private void rollOverCurrentWriteFile(int recordSize) throws IOException {
-            if (currentWriteFile == null ||  currentWriteFileOffset + recordSize > dbInternal.options.getMaxFileSize()) {
+            if (currentWriteFile == null || currentWriteFileOffset + recordSize > dbInternal.options.getMaxFileSize()) {
                 if (currentWriteFile != null) {
                     currentWriteFile.flushToDisk();
                     currentWriteFile.getIndexFile().flushToDisk();
@@ -316,28 +323,5 @@ class CompactionManager {
                 currentWriteFileOffset = 0;
             }
         }
-    }
-
-
-    // Used only for tests. to be called only after all writes in the test have been performed.
-    @VisibleForTesting
-    synchronized boolean isCompactionComplete() {
-
-        if (!isCompactionRunning())
-            return true;
-
-        if (compactionQueue.isEmpty()) {
-            try {
-                isRunning = false;
-                submitFileForCompaction(STOP_SIGNAL);
-                compactionThread.join();
-            } catch (InterruptedException e) {
-                logger.error("Error in isCompactionComplete", e);
-            }
-
-            return true;
-        }
-
-        return false;
     }
 }

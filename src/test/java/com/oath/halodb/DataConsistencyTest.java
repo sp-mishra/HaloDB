@@ -6,7 +6,6 @@
 package com.oath.halodb;
 
 import com.google.common.primitives.Longs;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
@@ -20,24 +19,26 @@ import java.util.Set;
 
 public class DataConsistencyTest extends TestBase {
     private static final Logger logger = LoggerFactory.getLogger(DataConsistencyTest.class);
-
+    private static final int fixedKeySize = 16;
+    private static final int maxValueSize = 100;
+    private static final int noOfRecords = 100_000;
+    private static final int noOfTransactions = 1_000_000;
     private final Object lock = new Object();
     private volatile boolean insertionComplete;
     private volatile boolean updatesComplete;
     private volatile boolean foundNonMatchingValue;
-
-    private static final int fixedKeySize = 16;
-    private static final int maxValueSize = 100;
-
-    private static final int noOfRecords = 100_000;
-    private static final int noOfTransactions = 1_000_000;
-
     private ByteBuffer[] keys;
 
     private RandomDataGenerator randDataGenerator;
     private Random random = new Random();
 
     private HaloDB haloDB;
+
+    static long getVersionFromValue(byte[] value) {
+        byte[] v = new byte[8];
+        System.arraycopy(value, value.length - 8, v, 0, 8);
+        return Longs.fromByteArray(v);
+    }
 
     @BeforeMethod
     public void init() {
@@ -86,7 +87,7 @@ public class DataConsistencyTest extends TestBase {
             totalReads += reader.readCount;
             totalReadSize += reader.readSize;
         }
-        long time = (System.currentTimeMillis() - start)/1000;
+        long time = (System.currentTimeMillis() - start) / 1000;
 
         Assert.assertFalse(foundNonMatchingValue);
         Assert.assertTrue(db.checkSize());
@@ -101,9 +102,19 @@ public class DataConsistencyTest extends TestBase {
         logger.info("Completed {} updates", writer.updateCount);
         logger.info("Completed {} deletes", writer.deleteCount);
         logger.info("Completed {} reads", totalReads);
-        logger.info("Reads per second {}. {} MB/second", totalReads/time, totalReadSize/1024/1024/time);
-        logger.info("Writes per second {}. {} KB/second", noOfTransactions/time, writer.totalWriteSize/1024/time);
-        logger.info("Compaction rate {} KB/second", haloDB.stats().getCompactionRateSinceBeginning()/1024);
+        logger.info("Reads per second {}. {} MB/second", totalReads / time, totalReadSize / 1024 / 1024 / time);
+        logger.info("Writes per second {}. {} KB/second", noOfTransactions / time, writer.totalWriteSize / 1024 / time);
+        logger.info("Compaction rate {} KB/second", haloDB.stats().getCompactionRateSinceBeginning() / 1024);
+    }
+
+    private int getRandomKeyLength() {
+        return random.nextInt(fixedKeySize) + 1;
+    }
+
+    private byte[] generateRandomValueWithVersion(long version, int size) {
+        byte[] value = randDataGenerator.getData(size);
+        System.arraycopy(Longs.toByteArray(version), 0, value, size - 8, 8);
+        return value;
     }
 
     class Writer extends Thread {
@@ -162,8 +173,7 @@ public class DataConsistencyTest extends TestBase {
                                 totalWriteSize += size;
                                 deletedKeys.remove(keyToAdd);
                             }
-                        }
-                        else {
+                        } else {
                             db.put(k, keys[k], generateRandomValueWithVersion(updateCount, size));
                             totalWriteSize += size;
                         }
@@ -211,21 +221,5 @@ public class DataConsistencyTest extends TestBase {
                 }
             }
         }
-    }
-
-    private int getRandomKeyLength() {
-        return random.nextInt(fixedKeySize) + 1;
-    }
-
-    private byte[] generateRandomValueWithVersion(long version, int size) {
-        byte[] value = randDataGenerator.getData(size);
-        System.arraycopy(Longs.toByteArray(version), 0, value, size - 8, 8);
-        return value;
-    }
-
-    static long getVersionFromValue(byte[] value) {
-        byte[] v = new byte[8];
-        System.arraycopy(value, value.length-8, v, 0, 8);
-        return Longs.fromByteArray(v);
     }
 }

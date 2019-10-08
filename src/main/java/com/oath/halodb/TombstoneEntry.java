@@ -37,6 +37,41 @@ class TombstoneEntry {
         this.version = version;
     }
 
+    static TombstoneEntry deserialize(ByteBuffer buffer) {
+        long crc32 = Utils.toUnsignedIntFromInt(buffer.getInt());
+        int version = Utils.toUnsignedByte(buffer.get());
+        long sequenceNumber = buffer.getLong();
+        int keySize = (int) buffer.get();
+        byte[] key = new byte[keySize];
+        buffer.get(key);
+
+        return new TombstoneEntry(key, sequenceNumber, crc32, version);
+    }
+
+    // returns null if a corrupted entry is detected.
+    static TombstoneEntry deserializeIfNotCorrupted(ByteBuffer buffer) {
+        if (buffer.remaining() < TOMBSTONE_ENTRY_HEADER_SIZE) {
+            return null;
+        }
+
+        long crc32 = Utils.toUnsignedIntFromInt(buffer.getInt());
+        int version = Utils.toUnsignedByte(buffer.get());
+        long sequenceNumber = buffer.getLong();
+        int keySize = (int) buffer.get();
+        if (sequenceNumber < 0 || keySize <= 0 || version < 0 || version > 255 || buffer.remaining() < keySize)
+            return null;
+
+        byte[] key = new byte[keySize];
+        buffer.get(key);
+
+        TombstoneEntry entry = new TombstoneEntry(key, sequenceNumber, crc32, version);
+        if (entry.computeCheckSum() != entry.checkSum) {
+            return null;
+        }
+
+        return entry;
+    }
+
     byte[] getKey() {
         return key;
     }
@@ -58,49 +93,14 @@ class TombstoneEntry {
     }
 
     ByteBuffer[] serialize() {
-        byte keySize = (byte)key.length;
+        byte keySize = (byte) key.length;
         ByteBuffer header = ByteBuffer.allocate(TOMBSTONE_ENTRY_HEADER_SIZE);
-        header.put(VERSION_OFFSET, (byte)version);
+        header.put(VERSION_OFFSET, (byte) version);
         header.putLong(SEQUENCE_NUMBER_OFFSET, sequenceNumber);
         header.put(KEY_SIZE_OFFSET, keySize);
         long crc32 = computeCheckSum(header.array());
         header.putInt(CHECKSUM_OFFSET, Utils.toSignedIntFromLong(crc32));
-        return new ByteBuffer[] {header, ByteBuffer.wrap(key)};
-    }
-
-    static TombstoneEntry deserialize(ByteBuffer buffer) {
-        long crc32 = Utils.toUnsignedIntFromInt(buffer.getInt());
-        int version = Utils.toUnsignedByte(buffer.get());
-        long sequenceNumber = buffer.getLong();
-        int keySize = (int)buffer.get();
-        byte[] key = new byte[keySize];
-        buffer.get(key);
-
-        return new TombstoneEntry(key, sequenceNumber, crc32, version);
-    }
-
-    // returns null if a corrupted entry is detected. 
-    static TombstoneEntry deserializeIfNotCorrupted(ByteBuffer buffer) {
-        if (buffer.remaining() < TOMBSTONE_ENTRY_HEADER_SIZE) {
-            return null;
-        }
-
-        long crc32 = Utils.toUnsignedIntFromInt(buffer.getInt());
-        int version = Utils.toUnsignedByte(buffer.get());
-        long sequenceNumber = buffer.getLong();
-        int keySize = (int)buffer.get();
-        if (sequenceNumber < 0 || keySize <= 0 || version < 0 || version > 255 || buffer.remaining() < keySize)
-            return null;
-
-        byte[] key = new byte[keySize];
-        buffer.get(key);
-
-        TombstoneEntry entry = new TombstoneEntry(key, sequenceNumber, crc32, version);
-        if (entry.computeCheckSum() != entry.checkSum) {
-            return null;
-        }
-
-        return entry;
+        return new ByteBuffer[]{header, ByteBuffer.wrap(key)};
     }
 
     private long computeCheckSum(byte[] header) {
@@ -112,9 +112,9 @@ class TombstoneEntry {
 
     long computeCheckSum() {
         ByteBuffer header = ByteBuffer.allocate(TOMBSTONE_ENTRY_HEADER_SIZE);
-        header.put(VERSION_OFFSET, (byte)version);
+        header.put(VERSION_OFFSET, (byte) version);
         header.putLong(SEQUENCE_NUMBER_OFFSET, sequenceNumber);
-        header.put(KEY_SIZE_OFFSET, (byte)key.length);
+        header.put(KEY_SIZE_OFFSET, (byte) key.length);
         return computeCheckSum(header.array());
     }
 }

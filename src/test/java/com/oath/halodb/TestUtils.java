@@ -11,25 +11,15 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
+import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class TestUtils {
     private static final Logger logger = LoggerFactory.getLogger(TestUtils.class);
+    private static Random random = new Random();
 
     static String getTestDirectory(String... path) {
         return Paths.get("tmp", path).toString();
@@ -47,9 +37,8 @@ public class TestUtils {
         for (int i = 0; i < noOfRecords; i++) {
             byte[] key;
             if (size > 0) {
-             key = TestUtils.generateRandomByteArray(random.nextInt(Math.min(Byte.MAX_VALUE-1, size))+1);
-            }
-            else {
+                key = TestUtils.generateRandomByteArray(random.nextInt(Math.min(Byte.MAX_VALUE - 1, size)) + 1);
+            } else {
                 key = TestUtils.generateRandomByteArray();
             }
             while (keySet.contains(ByteBuffer.wrap(key))) {
@@ -61,8 +50,7 @@ public class TestUtils {
             byte[] value;
             if (size > 0) {
                 value = TestUtils.generateRandomByteArray(size - key.length);
-            }
-            else {
+            } else {
                 value = TestUtils.generateRandomByteArray();
             }
             records.add(new Record(key, value));
@@ -114,7 +102,7 @@ public class TestUtils {
 
         records.forEach(record -> {
             try {
-                byte[] value = TestUtils.generateRandomByteArray(size-record.getKey().length-Record.Header.HEADER_SIZE);
+                byte[] value = TestUtils.generateRandomByteArray(size - record.getKey().length - Record.Header.HEADER_SIZE);
                 db.put(record.getKey(), value);
                 updated.add(new Record(record.getKey(), value));
             } catch (HaloDBException e) {
@@ -166,14 +154,12 @@ public class TestUtils {
         return c;
     }
 
-    private static Random random = new Random();
-
     static String generateRandomAsciiString(int length) {
         StringBuilder builder = new StringBuilder(length);
 
         for (int i = 0; i < length; i++) {
             int next = 48 + random.nextInt(78);
-            builder.append((char)next);
+            builder.append((char) next);
         }
 
         return builder.toString();
@@ -185,7 +171,7 @@ public class TestUtils {
 
         for (int i = 0; i < length; i++) {
             int next = 48 + random.nextInt(78);
-            builder.append((char)next);
+            builder.append((char) next);
         }
 
         return builder.toString();
@@ -233,20 +219,20 @@ public class TestUtils {
 
     static Optional<File> getLatestDataFile(String directory) {
         return Arrays.stream(FileUtils.listDataFiles(new File(directory)))
-            .filter(f -> HaloDBFile.findFileType(f) == HaloDBFile.FileType.DATA_FILE)
-            .max(Comparator.comparing(File::getName));
+                .filter(f -> HaloDBFile.findFileType(f) == HaloDBFile.FileType.DATA_FILE)
+                .max(Comparator.comparing(File::getName));
     }
 
     static List<File> getDataFiles(String directory) {
         return Arrays.stream(FileUtils.listDataFiles(new File(directory)))
-            .filter(f -> HaloDBFile.findFileType(f) == HaloDBFile.FileType.DATA_FILE)
-            .collect(Collectors.toList());
+                .filter(f -> HaloDBFile.findFileType(f) == HaloDBFile.FileType.DATA_FILE)
+                .collect(Collectors.toList());
     }
 
     static Optional<File> getLatestCompactionFile(String directory) {
         return Arrays.stream(FileUtils.listDataFiles(new File(directory)))
-            .filter(f -> HaloDBFile.findFileType(f) == HaloDBFile.FileType.COMPACTED_FILE)
-            .max(Comparator.comparing(File::getName));
+                .filter(f -> HaloDBFile.findFileType(f) == HaloDBFile.FileType.COMPACTED_FILE)
+                .max(Comparator.comparing(File::getName));
     }
 
     static FileTime getFileCreationTime(File file) throws IOException {

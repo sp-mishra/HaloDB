@@ -6,7 +6,6 @@ package com.oath.halodb.benchmarks;
 
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.RateLimiter;
-
 import org.HdrHistogram.Histogram;
 
 import java.io.File;
@@ -19,25 +18,18 @@ import java.util.concurrent.TimeUnit;
 
 public class BenchmarkTool {
 
-    private static SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
-
     // adjust HaloDB number of records accordingly.
     private final static int numberOfRecords = 500_000_000;
-
-    private static volatile boolean isReadComplete = false;
-
     private static final int numberOfReads = 640_000_000;
     private static final int numberOfReadThreads = 32;
     private static final int noOfReadsPerThread = numberOfReads / numberOfReadThreads; // 400 million.
-
     private static final int writeMBPerSecond = 20 * 1024 * 1024;
     private static final RateLimiter writeRateLimiter = RateLimiter.create(writeMBPerSecond);
-
     private static final int recordSize = 1024;
-
     private static final int seed = 100;
     private static final Random random = new Random(seed);
-
+    private static SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+    private static volatile boolean isReadComplete = false;
     private static RandomDataGenerator randomDataGenerator = new RandomDataGenerator(seed);
 
     public static void main(String[] args) throws Exception {
@@ -46,8 +38,7 @@ public class BenchmarkTool {
         Benchmarks benchmark = null;
         try {
             benchmark = Benchmarks.valueOf(benchmarkType);
-        }
-        catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             System.out.println("Benchmarks should be one of " + Arrays.toString(Benchmarks.values()));
             System.exit(1);
         }
@@ -65,11 +56,20 @@ public class BenchmarkTool {
         System.out.println("Opened the database.");
 
         switch (benchmark) {
-            case FILL_SEQUENCE: createDB(db, true);break;
-            case FILL_RANDOM: createDB(db, false);break;
-            case READ_RANDOM: readRandom(db, numberOfReadThreads);break;
-            case RANDOM_UPDATE: update(db);break;
-            case READ_AND_UPDATE: updateWithReads(db);
+            case FILL_SEQUENCE:
+                createDB(db, true);
+                break;
+            case FILL_RANDOM:
+                createDB(db, false);
+                break;
+            case READ_RANDOM:
+                readRandom(db, numberOfReadThreads);
+                break;
+            case RANDOM_UPDATE:
+                update(db);
+                break;
+            case READ_AND_UPDATE:
+                updateWithReads(db);
         }
 
         db.close();
@@ -82,7 +82,7 @@ public class BenchmarkTool {
 
         for (int i = 0; i < numberOfRecords; i++) {
             value = randomDataGenerator.getData(recordSize);
-            dataSize += (long)value.length;
+            dataSize += (long) value.length;
 
             byte[] key = isSequential ? longToBytes(i) : longToBytes(random.nextInt(numberOfRecords));
             db.put(key, value);
@@ -107,7 +107,7 @@ public class BenchmarkTool {
         for (int i = 0; i < numberOfRecords; i++) {
             value = randomDataGenerator.getData(recordSize);
             writeRateLimiter.acquire(value.length);
-            dataSize += (long)value.length;
+            dataSize += (long) value.length;
 
             byte[] key = longToBytes(random.nextInt(numberOfRecords));
             db.put(key, value);
@@ -144,10 +144,10 @@ public class BenchmarkTool {
         long time = (System.currentTimeMillis() - start) / 1000;
 
         System.out.printf("Completed %d reads with %d threads in %d seconds\n", numberOfReads, numberOfReadThreads, time);
-        System.out.println("Operations per second - " + numberOfReads/time);
+        System.out.println("Operations per second - " + numberOfReads / time);
 
         Histogram latencyHistogram = new Histogram(TimeUnit.SECONDS.toNanos(10), 3);
-        for(Read r : reads) {
+        for (Read r : reads) {
             latencyHistogram.add(r.latencyHistogram);
         }
 
@@ -172,7 +172,7 @@ public class BenchmarkTool {
                 while (!isReadComplete) {
                     value = randomDataGenerator.getData(recordSize);
                     writeRateLimiter.acquire(value.length);
-                    dataSize += (long)value.length;
+                    dataSize += (long) value.length;
 
                     byte[] key = longToBytes(random.nextInt(numberOfRecords));
                     db.put(key, value);
@@ -185,7 +185,7 @@ public class BenchmarkTool {
                 long end = System.currentTimeMillis();
                 long time = (end - start) / 1000;
                 System.out.println("Completed over writing data in " + time);
-                System.out.println("Write operations per second - " + count/time);
+                System.out.println("Write operations per second - " + count / time);
                 System.out.printf("Write rate %d MB/sec\n", dataSize / time / 1024l / 1024l);
                 System.out.println("Size of database " + db.size());
             }
@@ -199,7 +199,7 @@ public class BenchmarkTool {
 
         update.start();
 
-        for(Read r : reads) {
+        for (Read r : reads) {
             try {
                 r.join();
             } catch (InterruptedException e) {
@@ -220,10 +220,10 @@ public class BenchmarkTool {
         System.out.println("Maximum time taken by a read thread to complete - " + maxTime);
 
         System.out.printf("Completed %d reads with %d threads in %d seconds\n", numberOfReads, numberOfReadThreads, time);
-        System.out.println("Read operations per second - " + numberOfReads/time);
+        System.out.println("Read operations per second - " + numberOfReads / time);
 
         Histogram latencyHistogram = new Histogram(TimeUnit.SECONDS.toNanos(10), 3);
-        for(Read r : reads) {
+        for (Read r : reads) {
             latencyHistogram.add(r.latencyHistogram);
         }
 
@@ -235,6 +235,13 @@ public class BenchmarkTool {
         System.out.printf("99.99th percentile - %d\n", latencyHistogram.getValueAtPercentile(99.99));
     }
 
+    public static byte[] longToBytes(long value) {
+        return Longs.toByteArray(value);
+    }
+
+    public static String printDate() {
+        return sdf.format(new Date()) + ": ";
+    }
 
     static class Read extends Thread {
         final int id;
@@ -256,13 +263,13 @@ public class BenchmarkTool {
             long start = System.currentTimeMillis();
 
             while (count < noOfReadsPerThread) {
-                long id = (long)rand.nextInt(numberOfRecords);
+                long id = (long) rand.nextInt(numberOfRecords);
                 long s = System.nanoTime();
                 byte[] value = db.get(longToBytes(id));
-                latencyHistogram.recordValue(System.nanoTime()-s);
+                latencyHistogram.recordValue(System.nanoTime() - s);
                 count++;
                 if (value == null) {
-                    System.out.println("NO value for key " +id);
+                    System.out.println("NO value for key " + id);
                     continue;
                 }
 
@@ -277,14 +284,6 @@ public class BenchmarkTool {
 
             System.out.printf("Read: %d Completed in time %d\n", id, time);
         }
-    }
-
-    public static byte[] longToBytes(long value) {
-        return Longs.toByteArray(value);
-    }
-
-    public static String printDate() {
-        return sdf.format(new Date()) + ": ";
     }
 
 

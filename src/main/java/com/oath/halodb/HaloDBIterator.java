@@ -15,14 +15,11 @@ import java.util.NoSuchElementException;
 
 public class HaloDBIterator implements Iterator<Record> {
     private static final Logger logger = LoggerFactory.getLogger(HaloDBIterator.class);
-
+    private final HaloDBInternal dbInternal;
     private Iterator<Integer> outer;
     private Iterator<IndexFileEntry> inner;
     private HaloDBFile currentFile;
-
     private Record next;
-
-    private final HaloDBInternal dbInternal;
 
     HaloDBIterator(HaloDBInternal dbInternal) {
         this.dbInternal = dbInternal;
@@ -117,8 +114,8 @@ public class HaloDBIterator implements Iterator<Record> {
         Record record = null;
         if (dbInternal.isRecordFresh(entry.getKey(), meta)) {
             byte[] value = currentFile.readFromFile(
-                Utils.getValueOffset(entry.getRecordOffset(), entry.getKey()),
-                Utils.getValueSize(entry.getRecordSize(), entry.getKey()));
+                    Utils.getValueOffset(entry.getRecordOffset(), entry.getKey()),
+                    Utils.getValueSize(entry.getRecordSize(), entry.getKey()));
             record = new Record(entry.getKey(), value);
             record.setRecordMetaData(meta);
         }

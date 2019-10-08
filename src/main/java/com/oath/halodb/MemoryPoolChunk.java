@@ -68,14 +68,14 @@ class MemoryPoolChunk {
     void fillSlot(int slotOffset, byte[] key, byte[] value, MemoryPoolAddress nextAddress) {
         if (key.length > fixedKeyLength || value.length != fixedValueLength) {
             throw new IllegalArgumentException(
-                String.format("Invalid request. Key length %d. fixed key length %d. Value length %d",
-                              key.length, fixedKeyLength, value.length)
+                    String.format("Invalid request. Key length %d. fixed key length %d. Value length %d",
+                            key.length, fixedKeyLength, value.length)
             );
         }
         if (chunkSize - slotOffset < fixedSlotSize) {
             throw new IllegalArgumentException(
-                String.format("Invalid offset %d. Chunk size %d. fixed slot size %d",
-                              slotOffset, chunkSize, fixedSlotSize)
+                    String.format("Invalid offset %d. Chunk size %d. fixed slot size %d",
+                            slotOffset, chunkSize, fixedSlotSize)
             );
         }
 
@@ -88,8 +88,8 @@ class MemoryPoolChunk {
     void setValue(byte[] value, int slotOffset) {
         if (value.length != fixedValueLength) {
             throw new IllegalArgumentException(
-                String.format("Invalid value length. fixedValueLength %d, value length %d",
-                              fixedValueLength, value.length)
+                    String.format("Invalid value length. fixedValueLength %d, value length %d",
+                            fixedValueLength, value.length)
             );
         }
 

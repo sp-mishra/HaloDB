@@ -23,7 +23,7 @@ public class TombstoneFileCleanUpTest extends TestBase {
         int noOfRecordsPerFile = 1024;
         int noOfFiles = 100;
         int noOfRecords = noOfRecordsPerFile * noOfFiles;
-        List<Record> records = TestUtils.insertRandomRecordsOfSize(db, noOfRecords, 1024-Record.Header.HEADER_SIZE);
+        List<Record> records = TestUtils.insertRandomRecordsOfSize(db, noOfRecords, 1024 - Record.Header.HEADER_SIZE);
 
         // delete all records
         for (Record r : records) {
@@ -108,10 +108,10 @@ public class TombstoneFileCleanUpTest extends TestBase {
         int noOfRecordsPerFile = 1024;
         int noOfFiles = 100;
         int noOfRecords = noOfRecordsPerFile * noOfFiles;
-        List<Record> records = TestUtils.insertRandomRecordsOfSize(db, noOfRecords, 1024-Record.Header.HEADER_SIZE);
+        List<Record> records = TestUtils.insertRandomRecordsOfSize(db, noOfRecords, 1024 - Record.Header.HEADER_SIZE);
 
         // delete first record from each file, since compaction threshold is 1 none of the files will be compacted.
-        for (int i = 0; i < noOfRecords; i+=noOfRecordsPerFile) {
+        for (int i = 0; i < noOfRecords; i += noOfRecordsPerFile) {
             db.delete(records.get(i).getKey());
         }
 
@@ -143,7 +143,7 @@ public class TombstoneFileCleanUpTest extends TestBase {
         int tombstoneCount = 0;
         while (iterator.hasNext()) {
             TombstoneEntry entry = iterator.next();
-            Assert.assertEquals(entry.getKey(), records.get(tombstoneCount*1024).getKey());
+            Assert.assertEquals(entry.getKey(), records.get(tombstoneCount * 1024).getKey());
             tombstoneCount++;
         }
         Assert.assertEquals(tombstoneCount, noOfFiles);
@@ -219,7 +219,7 @@ public class TombstoneFileCleanUpTest extends TestBase {
             db.put(r.getKey(), r.getValue());
         }
 
-        for (int i = 0; i < noOfRecords/2; i++) {
+        for (int i = 0; i < noOfRecords / 2; i++) {
             Record r = records.get(i);
             db.delete(r.getKey());
         }
@@ -247,7 +247,7 @@ public class TombstoneFileCleanUpTest extends TestBase {
         }
 
         HaloDBStats stats = db.stats();
-        Assert.assertEquals(noOfRecords/2, stats.getNumberOfTombstonesFoundDuringOpen());
+        Assert.assertEquals(noOfRecords / 2, stats.getNumberOfTombstonesFoundDuringOpen());
         Assert.assertEquals(0, stats.getNumberOfTombstonesCleanedUpDuringOpen());
     }
 
@@ -289,7 +289,7 @@ public class TombstoneFileCleanUpTest extends TestBase {
                 db.delete(records.get(i).getKey());
             }
             if (i % 4 == 0) {
-                db.delete((records.get(i+mid).getKey()));
+                db.delete((records.get(i + mid).getKey()));
             }
         }
         TestUtils.waitForCompactionToComplete(db);
@@ -319,7 +319,7 @@ public class TombstoneFileCleanUpTest extends TestBase {
         // See comments above how 4 is calculated
         Assert.assertEquals(current.length, 4);
         // All tombstone files are rolled over to new files
-        Assert.assertTrue(getFileId(current[0].getName()) > getFileId(original[original.length-1].getName()));
+        Assert.assertTrue(getFileId(current[0].getName()) > getFileId(original[original.length - 1].getName()));
 
         // Delete 1 record and verify currentTombstoneFile is initialized
         db.delete(records.get(1).getKey());

@@ -3,7 +3,7 @@ package com.oath.halodb;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-public class HaloDBOptionsTest  extends TestBase {
+public class HaloDBOptionsTest extends TestBase {
 
     @Test
     public void testDefaultOptions() throws HaloDBException {

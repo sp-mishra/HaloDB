@@ -36,6 +36,34 @@ final class OffHeapHashTableStats {
         this.segmentStats = segmentStats;
     }
 
+    private static long maxOf(long[] arr) {
+        long r = 0;
+        for (long l : arr) {
+            if (l > r) {
+                r = l;
+            }
+        }
+        return r;
+    }
+
+    private static long minOf(long[] arr) {
+        long r = Long.MAX_VALUE;
+        for (long l : arr) {
+            if (l < r) {
+                r = l;
+            }
+        }
+        return r;
+    }
+
+    private static double avgOf(long[] arr) {
+        double r = 0d;
+        for (long l : arr) {
+            r += l;
+        }
+        return r / arr.length;
+    }
+
     public long getRehashCount() {
         return rehashCount;
     }
@@ -74,41 +102,13 @@ final class OffHeapHashTableStats {
 
     public String toString() {
         return Objects.toStringHelper(this)
-            .add("hitCount", hitCount)
-            .add("missCount", missCount)
-            .add("size", size)
-            .add("rehashCount", rehashCount)
-            .add("put(add/replace/fail)", Long.toString(putAddCount) + '/' + putReplaceCount + '/' + putFailCount)
-            .add("removeCount", removeCount)
-            .toString();
-    }
-
-    private static long maxOf(long[] arr) {
-        long r = 0;
-        for (long l : arr) {
-            if (l > r) {
-                r = l;
-            }
-        }
-        return r;
-    }
-
-    private static long minOf(long[] arr) {
-        long r = Long.MAX_VALUE;
-        for (long l : arr) {
-            if (l < r) {
-                r = l;
-            }
-        }
-        return r;
-    }
-
-    private static double avgOf(long[] arr) {
-        double r = 0d;
-        for (long l : arr) {
-            r += l;
-        }
-        return r / arr.length;
+                .add("hitCount", hitCount)
+                .add("missCount", missCount)
+                .add("size", size)
+                .add("rehashCount", rehashCount)
+                .add("put(add/replace/fail)", Long.toString(putAddCount) + '/' + putReplaceCount + '/' + putFailCount)
+                .add("removeCount", removeCount)
+                .toString();
     }
 
     public boolean equals(Object o) {

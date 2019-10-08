@@ -20,23 +20,13 @@ import java.util.Random;
 
 import static org.testng.Assert.*;
 
-public class UnsTest
-{
-    @AfterMethod(alwaysRun = true)
-    public void deinit()
-    {
-        Uns.clearUnsDebugForTest();
-    }
-
-    private static final Unsafe unsafe;
-
+public class UnsTest {
     static final int CAPACITY = 65536;
     static final ByteBuffer directBuffer;
+    private static final Unsafe unsafe;
 
-    static
-    {
-        try
-        {
+    static {
+        try {
             Field field = Unsafe.class.getDeclaredField("theUnsafe");
             field.setAccessible(true);
             unsafe = (Unsafe) field.get(null);
@@ -44,15 +34,12 @@ public class UnsTest
                 throw new RuntimeException("Address size " + unsafe.addressSize() + " not supported yet (max 8 bytes)");
 
             directBuffer = ByteBuffer.allocateDirect(CAPACITY);
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             throw new AssertionError(e);
         }
     }
 
-    private static void fillRandom()
-    {
+    private static void fillRandom() {
         Random r = new Random();
         directBuffer.clear();
         while (directBuffer.remaining() >= 4)
@@ -60,15 +47,28 @@ public class UnsTest
         directBuffer.clear();
     }
 
+    private static void equals(byte[] ref, long adr, int off, int len) {
+        for (; len-- > 0; off++)
+            assertEquals(unsafe.getByte(adr + off), ref[off]);
+    }
+
+    private static void equals(byte[] ref, byte[] arr, int off, int len) {
+        for (; len-- > 0; off++)
+            assertEquals(arr[off], ref[off]);
+    }
+
+    @AfterMethod(alwaysRun = true)
+    public void deinit() {
+        Uns.clearUnsDebugForTest();
+    }
+
     @Test
-    public void testDirectBufferFor() throws Exception
-    {
+    public void testDirectBufferFor() throws Exception {
         fillRandom();
 
         ByteBuffer buf = Uns.directBufferFor(((DirectBuffer) directBuffer).address(), 0, directBuffer.capacity(), false);
 
-        for (int i = 0; i < CAPACITY; i++)
-        {
+        for (int i = 0; i < CAPACITY; i++) {
             byte b = buf.get();
             byte d = directBuffer.get();
             assertEquals(b, d);
@@ -82,8 +82,7 @@ public class UnsTest
         buf.clear();
         directBuffer.clear();
 
-        while (buf.remaining() >= 8)
-        {
+        while (buf.remaining() >= 8) {
             long b = buf.getLong();
             long d = directBuffer.getLong();
             assertEquals(b, d);
@@ -92,8 +91,7 @@ public class UnsTest
             assertEquals(buf.remaining(), directBuffer.remaining());
         }
 
-        while (buf.remaining() >= 4)
-        {
+        while (buf.remaining() >= 4) {
             int b = buf.getInt();
             int d = directBuffer.getInt();
             assertEquals(b, d);
@@ -102,8 +100,7 @@ public class UnsTest
             assertEquals(buf.remaining(), directBuffer.remaining());
         }
 
-        for (int i = 0; i < CAPACITY; i++)
-        {
+        for (int i = 0; i < CAPACITY; i++) {
             byte b = buf.get(i);
             byte d = directBuffer.get(i);
             assertEquals(b, d);
@@ -144,8 +141,7 @@ public class UnsTest
     }
 
     @Test
-    public void testAllocate() throws Exception
-    {
+    public void testAllocate() throws Exception {
         long adr = Uns.allocate(100);
         assertNotEquals(adr, 0L);
         Uns.free(adr);
@@ -155,14 +151,12 @@ public class UnsTest
     }
 
     @Test(expectedExceptions = IOException.class)
-    public void testAllocateTooMuch() throws Exception
-    {
+    public void testAllocateTooMuch() throws Exception {
         Uns.allocateIOException(Long.MAX_VALUE);
     }
 
     @Test
-    public void testGetTotalAllocated() throws Exception
-    {
+    public void testGetTotalAllocated() throws Exception {
         long before = Uns.getTotalAllocated();
         if (before < 0L)
             return;
@@ -182,28 +176,22 @@ public class UnsTest
 //        }
 
         long adr = Uns.allocate(128 * 1024 * 1024);
-        try
-        {
+        try {
             assertTrue(Uns.getTotalAllocated() > before);
-        }
-        finally
-        {
+        } finally {
             Uns.free(adr);
         }
     }
 
     @Test
-    public void testCopyMemory() throws Exception
-    {
+    public void testCopyMemory() throws Exception {
         byte[] ref = HashTableTestUtils.randomBytes(7777 + 130);
         byte[] arr = new byte[7777 + 130];
 
         long adr = Uns.allocate(7777 + 130);
-        try
-        {
+        try {
             for (int offset = 0; offset < 10; offset += 13)
-                for (int off = 0; off < 10; off += 13)
-                {
+                for (int off = 0; off < 10; off += 13) {
                     Uns.copyMemory(ref, off, adr, offset, 7777);
 
                     equals(ref, adr, offset, 7777);
@@ -212,56 +200,34 @@ public class UnsTest
 
                     equals(ref, arr, off, 7777);
                 }
-        }
-        finally
-        {
+        } finally {
             Uns.free(adr);
         }
     }
 
-    private static void equals(byte[] ref, long adr, int off, int len)
-    {
-        for (; len-- > 0; off++)
-            assertEquals(unsafe.getByte(adr + off), ref[off]);
-    }
-
-    private static void equals(byte[] ref, byte[] arr, int off, int len)
-    {
-        for (; len-- > 0; off++)
-            assertEquals(arr[off], ref[off]);
-    }
-
     @Test
-    public void testSetMemory() throws Exception
-    {
+    public void testSetMemory() throws Exception {
         long adr = Uns.allocate(7777 + 130);
-        try
-        {
+        try {
             for (byte b = 0; b < 13; b++)
-                for (int offset = 0; offset < 10; offset += 13)
-                {
+                for (int offset = 0; offset < 10; offset += 13) {
                     Uns.setMemory(adr, offset, 7777, b);
 
                     for (int off = 0; off < 7777; off++)
                         assertEquals(unsafe.getByte(adr + offset), b);
                 }
-        }
-        finally
-        {
+        } finally {
             Uns.free(adr);
         }
     }
 
     @Test
-    public void testGetLongFromByteArray() throws Exception
-    {
+    public void testGetLongFromByteArray() throws Exception {
         byte[] arr = HashTableTestUtils.randomBytes(32);
         ByteOrder order = directBuffer.order();
         directBuffer.order(ByteOrder.nativeOrder());
-        try
-        {
-            for (int i = 0; i < 14; i++)
-            {
+        try {
+            for (int i = 0; i < 14; i++) {
                 long u = Uns.getLongFromByteArray(arr, i);
                 directBuffer.clear();
                 directBuffer.put(arr);
@@ -269,92 +235,72 @@ public class UnsTest
                 long b = directBuffer.getLong(i);
                 assertEquals(b, u);
             }
-        }
-        finally
-        {
+        } finally {
             directBuffer.order(order);
         }
     }
 
     @Test
-    public void testGetPutLong() throws Exception
-    {
+    public void testGetPutLong() throws Exception {
         long adr = Uns.allocate(128);
-        try
-        {
+        try {
             Uns.copyMemory(HashTableTestUtils.randomBytes(128), 0, adr, 0, 128);
 
-            for (int i = 0; i < 14; i++)
-            {
+            for (int i = 0; i < 14; i++) {
                 long l = Uns.getLong(adr, i);
                 assertEquals(unsafe.getLong(adr + i), Uns.getLong(adr, i));
 
                 Uns.putLong(adr, i, l);
                 assertEquals(unsafe.getLong(adr + i), l);
             }
-        }
-        finally
-        {
+        } finally {
             Uns.free(adr);
         }
     }
 
     @Test
-    public void testGetPutInt() throws Exception
-    {
+    public void testGetPutInt() throws Exception {
         long adr = Uns.allocate(128);
-        try
-        {
+        try {
             Uns.copyMemory(HashTableTestUtils.randomBytes(128), 0, adr, 0, 128);
 
-            for (int i = 0; i < 14; i++)
-            {
+            for (int i = 0; i < 14; i++) {
                 int l = Uns.getInt(adr, i);
                 assertEquals(unsafe.getInt(adr + i), Uns.getInt(adr, i));
 
                 Uns.putInt(adr, i, l);
                 assertEquals(unsafe.getInt(adr + i), l);
             }
-        }
-        finally
-        {
+        } finally {
             Uns.free(adr);
         }
     }
 
     @Test
-    public void testGetPutShort() throws Exception
-    {
+    public void testGetPutShort() throws Exception {
         long adr = Uns.allocate(128);
-        try
-        {
+        try {
             Uns.copyMemory(HashTableTestUtils.randomBytes(128), 0, adr, 0, 128);
 
-            for (int i = 0; i < 14; i++)
-            {
+            for (int i = 0; i < 14; i++) {
                 short l = Uns.getShort(adr, i);
                 assertEquals(unsafe.getShort(adr + i), Uns.getShort(adr, i));
 
                 Uns.putShort(adr, i, l);
                 assertEquals(unsafe.getShort(adr + i), l);
             }
-        }
-        finally
-        {
+        } finally {
             Uns.free(adr);
         }
     }
 
     @Test
-    public void testGetPutByte() throws Exception
-    {
+    public void testGetPutByte() throws Exception {
         long adr = Uns.allocate(128);
-        try
-        {
+        try {
             Uns.copyMemory(HashTableTestUtils.randomBytes(128), 0, adr, 0, 128);
 
-            for (int i = 0; i < 14; i++)
-            {
+            for (int i = 0; i < 14; i++) {
                 ByteBuffer buf = Uns.directBufferFor(adr, i, 8, false);
                 byte l = Uns.getByte(adr, i);
                 assertEquals(buf.get(0), Uns.getByte(adr, i));
@@ -364,21 +310,16 @@ public class UnsTest
                 assertEquals(buf.get(0), l);
                 assertEquals(unsafe.getByte(adr + i), l);
             }
-        }
-        finally
-        {
+        } finally {
             Uns.free(adr);
         }
     }
 
     @Test
-    public void testDecrementIncrement() throws Exception
-    {
+    public void testDecrementIncrement() throws Exception {
         long adr = Uns.allocate(128);
-        try
-        {
-            for (int i = 0; i < 120; i++)
-            {
+        try {
+            for (int i = 0; i < 120; i++) {
                 String loop = "at loop #" + i;
                 long v = Uns.getInt(adr, i);
                 Uns.increment(adr, i);
@@ -397,22 +338,17 @@ public class UnsTest
             assertTrue(Uns.decrement(adr, 8));
             Uns.putLong(adr, 8, 2);
             assertFalse(Uns.decrement(adr, 8));
-        }
-        finally
-        {
+        } finally {
             Uns.free(adr);
         }
     }
 
     @Test
-    public void testCompare() throws Exception
-    {
+    public void testCompare() throws Exception {
         long adr = Uns.allocate(CAPACITY);
-        try
-        {
+        try {
             long adr2 = Uns.allocate(CAPACITY);
-            try
-            {
+            try {
 
                 Uns.setMemory(adr, 5, 11, (byte) 0);
                 Uns.setMemory(adr2, 5, 11, (byte) 1);
@@ -425,14 +361,10 @@ public class UnsTest
                 Uns.setMemory(adr, 5, 11, (byte) 1);
 
                 assertTrue(Uns.memoryCompare(adr, 5, adr2, 5, 11));
-            }
-            finally
-            {
+            } finally {
                 Uns.free(adr2);
             }
-        }
-        finally
-        {
+        } finally {
             Uns.free(adr);
         }
     }
@@ -452,12 +384,11 @@ public class UnsTest
 
 
                 int offsetToChange = i + random.nextInt(key.length);
-                byte change = (byte)~Uns.getByte(adr2, offsetToChange);
+                byte change = (byte) ~Uns.getByte(adr2, offsetToChange);
 
                 Uns.setMemory(adr2, offsetToChange, 1, change);
                 assertFalse(Uns.memoryCompare(adr1, i, adr2, i, key.length));
-            }
-            finally {
+            } finally {
                 Uns.free(adr1);
                 Uns.free(adr2);
             }

@@ -18,8 +18,8 @@ public class HaloDBOptions implements Cloneable {
     // it will fall back to use maxFileSize, see the getter below
     private int maxTombstoneFileSize = 0;
 
-     // Data will be flushed to disk after flushDataSizeBytes have been written.
-     // -1 disables explicit flushing and let the kernel handle it.
+    // Data will be flushed to disk after flushDataSizeBytes have been written.
+    // -1 disables explicit flushing and let the kernel handle it.
     private long flushDataSizeBytes = -1;
 
     // Write call will sync data to disk before returning.
@@ -44,6 +44,8 @@ public class HaloDBOptions implements Cloneable {
     // Number of threads to scan index and tombstone files
     // to build in-memory index at db open
     private int buildIndexThreads = 1;
+    // to be used only in tests.
+    private boolean isCompactionDisabled = false;
 
     // Just to avoid clients having to deal with CloneNotSupportedException
     public HaloDBOptions clone() {
@@ -57,24 +59,32 @@ public class HaloDBOptions implements Cloneable {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper("")
-            .add("compactionThresholdPerFile", compactionThresholdPerFile)
-            .add("maxFileSize", maxFileSize)
-            .add("maxTombstoneFileSize", getMaxTombstoneFileSize())
-            .add("flushDataSizeBytes", flushDataSizeBytes)
-            .add("syncWrite", syncWrite)
-            .add("numberOfRecords", numberOfRecords)
-            .add("compactionJobRate", compactionJobRate)
-            .add("cleanUpInMemoryIndexOnClose", cleanUpInMemoryIndexOnClose)
-            .add("cleanUpTombstonesDuringOpen", cleanUpTombstonesDuringOpen)
-            .add("useMemoryPool", useMemoryPool)
-            .add("fixedKeySize", fixedKeySize)
-            .add("memoryPoolChunkSize", memoryPoolChunkSize)
-            .add("buildIndexThreads", buildIndexThreads)
-            .toString();
+                .add("compactionThresholdPerFile", compactionThresholdPerFile)
+                .add("maxFileSize", maxFileSize)
+                .add("maxTombstoneFileSize", getMaxTombstoneFileSize())
+                .add("flushDataSizeBytes", flushDataSizeBytes)
+                .add("syncWrite", syncWrite)
+                .add("numberOfRecords", numberOfRecords)
+                .add("compactionJobRate", compactionJobRate)
+                .add("cleanUpInMemoryIndexOnClose", cleanUpInMemoryIndexOnClose)
+                .add("cleanUpTombstonesDuringOpen", cleanUpTombstonesDuringOpen)
+                .add("useMemoryPool", useMemoryPool)
+                .add("fixedKeySize", fixedKeySize)
+                .add("memoryPoolChunkSize", memoryPoolChunkSize)
+                .add("buildIndexThreads", buildIndexThreads)
+                .toString();
+    }
+
+    public double getCompactionThresholdPerFile() {
+        return compactionThresholdPerFile;
     }
 
     public void setCompactionThresholdPerFile(double compactionThresholdPerFile) {
         this.compactionThresholdPerFile = compactionThresholdPerFile;
+    }
+
+    public int getMaxFileSize() {
+        return maxFileSize;
     }
 
     public void setMaxFileSize(int maxFileSize) {
@@ -84,6 +94,10 @@ public class HaloDBOptions implements Cloneable {
         this.maxFileSize = maxFileSize;
     }
 
+    public int getMaxTombstoneFileSize() {
+        return maxTombstoneFileSize > 0 ? maxTombstoneFileSize : maxFileSize;
+    }
+
     public void setMaxTombstoneFileSize(int maxFileSize) {
         if (maxFileSize <= 0) {
             throw new IllegalArgumentException("maxFileSize should be > 0");
@@ -91,48 +105,36 @@ public class HaloDBOptions implements Cloneable {
         this.maxTombstoneFileSize = maxFileSize;
     }
 
-    public void setFlushDataSizeBytes(long flushDataSizeBytes) {
-        this.flushDataSizeBytes = flushDataSizeBytes;
-    }
-
-    public void setNumberOfRecords(int numberOfRecords) {
-        this.numberOfRecords = numberOfRecords;
-    }
-
-    public void setCompactionJobRate(int compactionJobRate) {
-        this.compactionJobRate = compactionJobRate;
-    }
-
-    public void setCleanUpInMemoryIndexOnClose(boolean cleanUpInMemoryIndexOnClose) {
-        this.cleanUpInMemoryIndexOnClose = cleanUpInMemoryIndexOnClose;
-    }
-
-    public double getCompactionThresholdPerFile() {
-        return compactionThresholdPerFile;
-    }
-
-    public int getMaxFileSize() {
-        return maxFileSize;
-    }
-
-    public int getMaxTombstoneFileSize() {
-        return maxTombstoneFileSize > 0 ? maxTombstoneFileSize : maxFileSize;
-    }
-
     public long getFlushDataSizeBytes() {
         return flushDataSizeBytes;
+    }
+
+    public void setFlushDataSizeBytes(long flushDataSizeBytes) {
+        this.flushDataSizeBytes = flushDataSizeBytes;
     }
 
     public int getNumberOfRecords() {
         return numberOfRecords;
     }
 
+    public void setNumberOfRecords(int numberOfRecords) {
+        this.numberOfRecords = numberOfRecords;
+    }
+
     public int getCompactionJobRate() {
         return compactionJobRate;
     }
 
+    public void setCompactionJobRate(int compactionJobRate) {
+        this.compactionJobRate = compactionJobRate;
+    }
+
     public boolean isCleanUpInMemoryIndexOnClose() {
         return cleanUpInMemoryIndexOnClose;
+    }
+
+    public void setCleanUpInMemoryIndexOnClose(boolean cleanUpInMemoryIndexOnClose) {
+        this.cleanUpInMemoryIndexOnClose = cleanUpInMemoryIndexOnClose;
     }
 
     public boolean isCleanUpTombstonesDuringOpen() {
@@ -142,7 +144,7 @@ public class HaloDBOptions implements Cloneable {
     public void setCleanUpTombstonesDuringOpen(boolean cleanUpTombstonesDuringOpen) {
         this.cleanUpTombstonesDuringOpen = cleanUpTombstonesDuringOpen;
     }
-    
+
     public boolean isUseMemoryPool() {
         return useMemoryPool;
     }
@@ -187,15 +189,13 @@ public class HaloDBOptions implements Cloneable {
         this.buildIndexThreads = buildIndexThreads;
     }
 
-    // to be used only in tests.
-    private boolean isCompactionDisabled = false;
-    
+    boolean isCompactionDisabled() {
+        return isCompactionDisabled;
+    }
+
     // not visible to outside the package.
     // to be used only in tests.
     void setCompactionDisabled(boolean compactionDisabled) {
         isCompactionDisabled = compactionDisabled;
-    }
-    boolean isCompactionDisabled() {
-        return isCompactionDisabled;
     }
 }

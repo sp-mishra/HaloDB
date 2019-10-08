@@ -59,8 +59,8 @@ public class TombstoneFileTest {
         // add a corrupted entry to the file. 
         int sequenceNumber = noOfRecords + 100;
         TombstoneEntry corrupted = new TombstoneEntry(TestUtils.generateRandomByteArray(), sequenceNumber, -1, 21);
-        try(FileChannel channel = FileChannel.open(
-            Paths.get(directory.getCanonicalPath(), fileId + TombstoneFile.TOMBSTONE_FILE_NAME).toAbsolutePath(), StandardOpenOption.APPEND)) {
+        try (FileChannel channel = FileChannel.open(
+                Paths.get(directory.getCanonicalPath(), fileId + TombstoneFile.TOMBSTONE_FILE_NAME).toAbsolutePath(), StandardOpenOption.APPEND)) {
             ByteBuffer[] data = corrupted.serialize();
             ByteBuffer header = data[0];
             // change the sequence number, due to which checksum won't match.
@@ -81,12 +81,12 @@ public class TombstoneFileTest {
         // add a corrupted entry to the file.
         int sequenceNumber = noOfRecords + 100;
         TombstoneEntry corrupted = new TombstoneEntry(TestUtils.generateRandomByteArray(), sequenceNumber, -1, 13);
-        try(FileChannel channel = FileChannel.open(
-            Paths.get(directory.getCanonicalPath(), fileId + TombstoneFile.TOMBSTONE_FILE_NAME).toAbsolutePath(), StandardOpenOption.APPEND)) {
+        try (FileChannel channel = FileChannel.open(
+                Paths.get(directory.getCanonicalPath(), fileId + TombstoneFile.TOMBSTONE_FILE_NAME).toAbsolutePath(), StandardOpenOption.APPEND)) {
             ByteBuffer[] data = corrupted.serialize();
             ByteBuffer header = data[0];
             // change the sequence number, due to which checksum won't match.
-            header.put(TombstoneEntry.KEY_SIZE_OFFSET, (byte)0xFF);
+            header.put(TombstoneEntry.KEY_SIZE_OFFSET, (byte) 0xFF);
             channel.write(data);
         }
 
@@ -103,11 +103,11 @@ public class TombstoneFileTest {
         // add a corrupted entry to the file.
         int sequenceNumber = noOfRecords + 100;
         TombstoneEntry corrupted = new TombstoneEntry(TestUtils.generateRandomByteArray(), sequenceNumber, -1, 17);
-        try(FileChannel channel = FileChannel.open(
-            Paths.get(directory.getCanonicalPath(), fileId + TombstoneFile.TOMBSTONE_FILE_NAME).toAbsolutePath(), StandardOpenOption.APPEND)) {
+        try (FileChannel channel = FileChannel.open(
+                Paths.get(directory.getCanonicalPath(), fileId + TombstoneFile.TOMBSTONE_FILE_NAME).toAbsolutePath(), StandardOpenOption.APPEND)) {
             ByteBuffer[] data = corrupted.serialize();
-            ByteBuffer truncatedKey = ByteBuffer.allocate(corrupted.getKey().length/2);
-            truncatedKey.put(TestUtils.generateRandomByteArray(corrupted.getKey().length/2));
+            ByteBuffer truncatedKey = ByteBuffer.allocate(corrupted.getKey().length / 2);
+            truncatedKey.put(TestUtils.generateRandomByteArray(corrupted.getKey().length / 2));
             truncatedKey.flip();
             data[1] = truncatedKey;
             channel.write(data);

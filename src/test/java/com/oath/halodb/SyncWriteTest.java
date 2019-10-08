@@ -1,15 +1,14 @@
 package com.oath.halodb;
 
+import mockit.Invocation;
+import mockit.Mock;
+import mockit.MockUp;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import mockit.Invocation;
-import mockit.Mock;
-import mockit.MockUp;
 
 public class SyncWriteTest extends TestBase {
 

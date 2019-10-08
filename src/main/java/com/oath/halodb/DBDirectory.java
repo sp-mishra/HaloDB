@@ -13,7 +13,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.List;
 
 /**
- * Represents the top level directory for a HaloDB instance. 
+ * Represents the top level directory for a HaloDB instance.
  */
 class DBDirectory {
 
@@ -33,14 +33,31 @@ class DBDirectory {
         FileChannel channel = null;
         try {
             channel = openReadOnlyChannel(directory);
-        }
-        catch(IOException e) {
+        } catch (IOException e) {
             // only swallow the exception if its Windows
             if (!isWindows()) {
                 throw e;
             }
         }
         return new DBDirectory(directory, channel);
+    }
+
+    /**
+     * In Linux the recommended way to flush directory metadata is to open a
+     * file descriptor for the directory and to call fsync on it. In Java opening a read-only file channel
+     * and calling force(true) will do the same for us. But this is an undocumented behavior
+     * in Java and could change in future versions.
+     * https://grokbase.com/t/lucene/dev/1519kz2s50/recent-java-9-commit-e5b66323ae45-breaks-fsync-on-directory
+     * <p>
+     * This currently works on Linux and OSX but may not work on other platforms. Therefore, if there is
+     * an exception we silently swallow it.
+     */
+    private static FileChannel openReadOnlyChannel(File dbDirectory) throws IOException {
+        return FileChannel.open(dbDirectory.toPath(), StandardOpenOption.READ);
+    }
+
+    private static boolean isWindows() {
+        return System.getProperty("os.name", "generic").toLowerCase(java.util.Locale.ENGLISH).indexOf("win") != -1;
     }
 
     void close() throws IOException {
@@ -69,23 +86,5 @@ class DBDirectory {
         if (directoryChannel != null) {
             directoryChannel.force(true);
         }
-    }
-
-    /**
-     * In Linux the recommended way to flush directory metadata is to open a
-     * file descriptor for the directory and to call fsync on it. In Java opening a read-only file channel
-     * and calling force(true) will do the same for us. But this is an undocumented behavior
-     * in Java and could change in future versions.
-     * https://grokbase.com/t/lucene/dev/1519kz2s50/recent-java-9-commit-e5b66323ae45-breaks-fsync-on-directory
-     *
-     * This currently works on Linux and OSX but may not work on other platforms. Therefore, if there is
-     * an exception we silently swallow it.
-     */
-    private static FileChannel openReadOnlyChannel(File dbDirectory) throws IOException {
-        return FileChannel.open(dbDirectory.toPath(), StandardOpenOption.READ);
-    }
-
-    private static boolean isWindows() {
-        return System.getProperty("os.name", "generic").toLowerCase(java.util.Locale.ENGLISH).indexOf("win") != -1;
     }
 }

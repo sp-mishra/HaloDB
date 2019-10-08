@@ -9,6 +9,7 @@ package com.oath.halodb;
 
 class OffHeapHashTableBuilder<V> {
 
+    static final String SYSTEM_PROPERTY_PREFIX = "org.caffinitas.ohc.";
     private int segmentCount;
     private int hashTableSize = 8192;
     private int memoryPoolChunkSize = 2 * 1024 * 1024;
@@ -27,12 +28,10 @@ class OffHeapHashTableBuilder<V> {
         segmentCount = roundUpToPowerOf2(cpus * 2, 1 << 30);
     }
 
-    static final String SYSTEM_PROPERTY_PREFIX = "org.caffinitas.ohc.";
-
     static int roundUpToPowerOf2(int number, int max) {
         return number >= max
-               ? max
-               : (number > 1) ? Integer.highestOneBit((number - 1) << 1) : 1;
+                ? max
+                : (number > 1) ? Integer.highestOneBit((number - 1) << 1) : 1;
     }
 
     static <V> OffHeapHashTableBuilder<V> newBuilder() {

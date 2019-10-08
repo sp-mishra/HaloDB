@@ -32,7 +32,7 @@ class Utils {
     }
 
     static int toSignedIntFromLong(long value) {
-        return (int)(value & 0xffffffffL);
+        return (int) (value & 0xffffffffL);
     }
 
     static int toUnsignedByte(byte value) {

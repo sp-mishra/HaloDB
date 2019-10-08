@@ -9,8 +9,8 @@ import java.util.Random;
 
 class RandomDataGenerator {
 
-    private final byte[] data;
     private static final int size = 1003087;
+    private final byte[] data;
     private int position = 0;
 
     RandomDataGenerator() {

@@ -9,56 +9,42 @@ package com.oath.halodb;
 
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
 
-public class HashTableValueSerializerTest
-{
+public class HashTableValueSerializerTest {
     @AfterMethod(alwaysRun = true)
-    public void deinit()
-    {
+    public void deinit() {
         Uns.clearUnsDebugForTest();
     }
 
     @Test
-    public void testFailingValueSerializerOnPut() throws IOException, InterruptedException
-    {
+    public void testFailingValueSerializerOnPut() throws IOException, InterruptedException {
         try (OffHeapHashTable<byte[]> cache = OffHeapHashTableBuilder.<byte[]>newBuilder()
-                                                            .valueSerializer(HashTableTestUtils.byteArraySerializerFailSerialize)
-                                                            .fixedValueSize(8)
-                                                            .build())
-        {
-            try
-            {
+                .valueSerializer(HashTableTestUtils.byteArraySerializerFailSerialize)
+                .fixedValueSize(8)
+                .build()) {
+            try {
                 cache.put(Ints.toByteArray(1), Longs.toByteArray(1));
                 Assert.fail();
-            }
-            catch (RuntimeException ignored)
-            {
+            } catch (RuntimeException ignored) {
                 // ok
             }
 
-            try
-            {
+            try {
                 cache.putIfAbsent(Ints.toByteArray(1), Longs.toByteArray(1));
                 Assert.fail();
-            }
-            catch (RuntimeException ignored)
-            {
+            } catch (RuntimeException ignored) {
                 // ok
             }
 
-            try
-            {
+            try {
                 cache.addOrReplace(Ints.toByteArray(1), Longs.toByteArray(1), Longs.toByteArray(2));
                 Assert.fail();
-            }
-            catch (RuntimeException ignored)
-            {
+            } catch (RuntimeException ignored) {
                 // ok
             }
 

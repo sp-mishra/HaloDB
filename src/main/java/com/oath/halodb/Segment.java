@@ -13,15 +13,13 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 abstract class Segment<V> {
 
+    private static final AtomicLongFieldUpdater<Segment> lockFieldUpdater =
+            AtomicLongFieldUpdater.newUpdater(Segment.class, "lock");
     final HashTableValueSerializer<V> valueSerializer;
     final int fixedValueLength;
     final int fixedKeyLength;
-
     private final Hasher hasher;
-
     private volatile long lock;
-    private static final AtomicLongFieldUpdater<Segment> lockFieldUpdater =
-        AtomicLongFieldUpdater.newUpdater(Segment.class, "lock");
 
     Segment(HashTableValueSerializer<V> valueSerializer, int fixedValueLength, Hasher hasher) {
         this(valueSerializer, fixedValueLength, -1, hasher);
@@ -33,7 +31,6 @@ abstract class Segment<V> {
         this.fixedKeyLength = fixedKeyLength;
         this.hasher = hasher;
     }
-
 
 
     boolean lock() {

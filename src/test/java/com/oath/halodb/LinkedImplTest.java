@@ -12,33 +12,22 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 
-public class LinkedImplTest
-{
-    @AfterMethod(alwaysRun = true)
-    public void deinit()
-    {
-        Uns.clearUnsDebugForTest();
-    }
-
-    static OffHeapHashTable<String> cache()
-    {
+public class LinkedImplTest {
+    static OffHeapHashTable<String> cache() {
         return cache(256);
     }
 
-    static OffHeapHashTable<String> cache(long capacity)
-    {
+    static OffHeapHashTable<String> cache(long capacity) {
         return cache(capacity, -1);
     }
 
-    static OffHeapHashTable<String> cache(long capacity, int hashTableSize)
-    {
+    static OffHeapHashTable<String> cache(long capacity, int hashTableSize) {
         return cache(capacity, hashTableSize, -1, -1);
     }
 
-    static OffHeapHashTable<String> cache(long capacity, int hashTableSize, int segments, long maxEntrySize)
-    {
+    static OffHeapHashTable<String> cache(long capacity, int hashTableSize, int segments, long maxEntrySize) {
         OffHeapHashTableBuilder<String> builder = OffHeapHashTableBuilder.<String>newBuilder()
-                                                  .valueSerializer(HashTableTestUtils.stringSerializer);
+                .valueSerializer(HashTableTestUtils.stringSerializer);
         if (hashTableSize > 0)
             builder.hashTableSize(hashTableSize);
         if (segments > 0)
@@ -50,11 +39,15 @@ public class LinkedImplTest
         return builder.build();
     }
 
+    @AfterMethod(alwaysRun = true)
+    public void deinit() {
+        Uns.clearUnsDebugForTest();
+    }
+
     @Test(expectedExceptions = IllegalArgumentException.class)
-    public void testExtremeHashTableSize() throws IOException
-    {
+    public void testExtremeHashTableSize() throws IOException {
         OffHeapHashTableBuilder<Object> builder = OffHeapHashTableBuilder.newBuilder()
-                                                               .hashTableSize(1 << 30);
+                .hashTableSize(1 << 30);
         builder.build().close();
     }
 

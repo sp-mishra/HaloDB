@@ -25,10 +25,9 @@ import java.util.stream.Stream;
 public class DBDirectoryTest {
 
     private static final File directory = Paths.get("tmp", "DBDirectoryTest").toFile();
-    private DBDirectory dbDirectory;
-
     private static Integer[] dataFileIds = {7, 12, 1, 8, 10};
     private static Integer[] tombstoneFileIds = {21, 13, 12};
+    private DBDirectory dbDirectory;
 
     @Test
     public void testListIndexFiles() {
@@ -68,33 +67,33 @@ public class DBDirectoryTest {
 
         Path directoryPath = dbDirectory.getPath();
         for (int i : dataFileIds) {
-            try(PrintWriter writer = new PrintWriter(new FileWriter(
-                directoryPath.resolve(i + IndexFile.INDEX_FILE_NAME).toString()))) {
+            try (PrintWriter writer = new PrintWriter(new FileWriter(
+                    directoryPath.resolve(i + IndexFile.INDEX_FILE_NAME).toString()))) {
                 writer.append("test");
             }
 
-            try(PrintWriter writer = new PrintWriter(new FileWriter(
-                directoryPath.resolve(i + HaloDBFile.DATA_FILE_NAME).toString()))) {
+            try (PrintWriter writer = new PrintWriter(new FileWriter(
+                    directoryPath.resolve(i + HaloDBFile.DATA_FILE_NAME).toString()))) {
                 writer.append("test");
             }
         }
 
         // repair file, should be skipped. 
-        try(PrintWriter writer = new PrintWriter(new FileWriter(
-            directoryPath.resolve(10000 + HaloDBFile.DATA_FILE_NAME + ".repair").toString()))) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(
+                directoryPath.resolve(10000 + HaloDBFile.DATA_FILE_NAME + ".repair").toString()))) {
             writer.append("test");
         }
 
         for (int i : tombstoneFileIds) {
-            try(PrintWriter writer = new PrintWriter(new FileWriter(
-                directoryPath.resolve(i + TombstoneFile.TOMBSTONE_FILE_NAME).toString()))) {
+            try (PrintWriter writer = new PrintWriter(new FileWriter(
+                    directoryPath.resolve(i + TombstoneFile.TOMBSTONE_FILE_NAME).toString()))) {
                 writer.append("test");
             }
         }
 
         // repair file, should be skipped.
-        try(PrintWriter writer = new PrintWriter(new FileWriter(
-            directoryPath.resolve(20000 + TombstoneFile.TOMBSTONE_FILE_NAME + ".repair").toString()))) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(
+                directoryPath.resolve(20000 + TombstoneFile.TOMBSTONE_FILE_NAME + ".repair").toString()))) {
             writer.append("test");
         }
     }

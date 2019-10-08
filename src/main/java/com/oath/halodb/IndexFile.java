@@ -14,25 +14,19 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.Objects;
 
 class IndexFile {
+    static final String INDEX_FILE_NAME = ".index";
     private static final Logger logger = LoggerFactory.getLogger(IndexFile.class);
-
+    private static final String nullMessage = "Index file entry cannot be null";
     private final int fileId;
     private final DBDirectory dbDirectory;
-    private File backingFile;
-
-    private FileChannel channel;
-
     private final HaloDBOptions options;
-
+    private File backingFile;
+    private FileChannel channel;
     private long unFlushedData = 0;
-
-    static final String INDEX_FILE_NAME = ".index";
-    private static final String nullMessage = "Index file entry cannot be null";
 
     IndexFile(int fileId, DBDirectory dbDirectory, HaloDBOptions options) {
         this.fileId = fileId;

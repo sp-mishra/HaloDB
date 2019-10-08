@@ -6,23 +6,12 @@
 package com.oath.halodb;
 
 import com.google.common.util.concurrent.RateLimiter;
-
+import mockit.*;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import sun.nio.ch.FileChannelImpl;
-
 import java.io.IOException;
-import java.nio.channels.WritableByteChannel;
-import java.nio.file.Paths;
 import java.util.List;
-
-import mockit.Expectations;
-import mockit.Invocation;
-import mockit.Mock;
-import mockit.MockUp;
-import mockit.Mocked;
-import mockit.VerificationsInOrder;
 
 public class CompactionWithErrorsTest extends TestBase {
 
@@ -188,8 +177,8 @@ public class CompactionWithErrorsTest extends TestBase {
             byte[] value = TestUtils.generateRandomByteArray();
             db.put(records.get(i).getKey(), value);
             records.set(i, new Record(records.get(i).getKey(), value));
-            db.put(records.get(i+10).getKey(), value);
-            records.set(i+10, new Record(records.get(i+10).getKey(), value));
+            db.put(records.get(i + 10).getKey(), value);
+            records.set(i + 10, new Record(records.get(i + 10).getKey(), value));
         }
         return records;
     }

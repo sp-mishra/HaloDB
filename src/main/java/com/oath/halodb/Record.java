@@ -20,12 +20,7 @@ public class Record {
     public Record(byte[] key, byte[] value) {
         this.key = key;
         this.value = value;
-        header = new Header(0, Versions.CURRENT_DATA_FILE_VERSION, (byte)key.length, value.length, -1);
-    }
-
-    ByteBuffer[] serialize() {
-        ByteBuffer headerBuf = serializeHeaderAndComputeChecksum();
-        return new ByteBuffer[] {headerBuf, ByteBuffer.wrap(key), ByteBuffer.wrap(value)};
+        header = new Header(0, Versions.CURRENT_DATA_FILE_VERSION, (byte) key.length, value.length, -1);
     }
 
     static Record deserialize(ByteBuffer buffer, short keySize, int valueSize) {
@@ -35,6 +30,11 @@ public class Record {
         buffer.get(key);
         buffer.get(value);
         return new Record(key, value);
+    }
+
+    ByteBuffer[] serialize() {
+        ByteBuffer headerBuf = serializeHeaderAndComputeChecksum();
+        return new ByteBuffer[]{headerBuf, ByteBuffer.wrap(key), ByteBuffer.wrap(value)};
     }
 
     public byte[] getKey() {
@@ -60,12 +60,16 @@ public class Record {
         return header.getRecordSize();
     }
 
+    long getSequenceNumber() {
+        return header.getSequenceNumber();
+    }
+
     void setSequenceNumber(long sequenceNumber) {
         header.sequenceNumber = sequenceNumber;
     }
 
-    long getSequenceNumber() {
-        return header.getSequenceNumber();
+    int getVersion() {
+        return header.version;
     }
 
     void setVersion(int version) {
@@ -73,10 +77,6 @@ public class Record {
             throw new IllegalArgumentException("Got version " + version + ". Record version must be in range [0,255]");
         }
         header.version = version;
-    }
-
-    int getVersion() {
-        return header.version;
     }
 
     Header getHeader() {
@@ -105,7 +105,7 @@ public class Record {
         CRC32 crc32 = new CRC32();
 
         // compute checksum with all but the first header element, key and value.
-        crc32.update(header, Header.CHECKSUM_OFFSET + Header.CHECKSUM_SIZE, Header.HEADER_SIZE-Header.CHECKSUM_SIZE);
+        crc32.update(header, Header.CHECKSUM_OFFSET + Header.CHECKSUM_SIZE, Header.HEADER_SIZE - Header.CHECKSUM_SIZE);
         crc32.update(key);
         crc32.update(value);
         return crc32.getValue();
@@ -122,7 +122,7 @@ public class Record {
             return false;
         }
 
-        Record record = (Record)obj;
+        Record record = (Record) obj;
         return Arrays.equals(getKey(), record.getKey()) && Arrays.equals(getValue(), record.getValue());
     }
 
@@ -171,22 +171,22 @@ public class Record {
             return new Header(checkSum, version, keySize, valueSize, sequenceNumber);
         }
 
-        // checksum value can be computed only with record key and value. 
+        static boolean verifyHeader(Record.Header header) {
+            return header.version >= 0 && header.version < 256
+                    && header.keySize > 0 && header.valueSize > 0
+                    && header.recordSize > 0 && header.sequenceNumber > 0;
+        }
+
+        // checksum value can be computed only with record key and value.
         ByteBuffer serialize() {
             byte[] header = new byte[HEADER_SIZE];
             ByteBuffer headerBuffer = ByteBuffer.wrap(header);
-            headerBuffer.put(VERSION_OFFSET, (byte)version);
+            headerBuffer.put(VERSION_OFFSET, (byte) version);
             headerBuffer.put(KEY_SIZE_OFFSET, keySize);
             headerBuffer.putInt(VALUE_SIZE_OFFSET, valueSize);
             headerBuffer.putLong(SEQUENCE_NUMBER_OFFSET, sequenceNumber);
 
             return headerBuffer;
-        }
-
-        static boolean verifyHeader(Record.Header header) {
-            return header.version >= 0 && header.version < 256
-                   &&  header.keySize > 0 && header.valueSize > 0
-                   && header.recordSize > 0 && header.sequenceNumber > 0;
         }
 
         byte getKeySize() {

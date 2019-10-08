@@ -8,7 +8,6 @@ package com.oath.halodb;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.Ints;
 import com.oath.halodb.histo.EstimatedHistogram;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +21,15 @@ class SegmentWithMemoryPool<V> extends Segment<V> {
 
     // maximum hash table size
     private static final int MAX_TABLE_SIZE = 1 << 30;
-
+    private final float loadFactor;
+    private final List<MemoryPoolChunk> chunks;
+    private final int chunkSize;
+    private final MemoryPoolAddress emptyAddress = new MemoryPoolAddress((byte) -1, -1);
+    private final int fixedSlotSize;
+    private final HashTableValueSerializer<V> valueSerializer;
+    private final ByteBuffer oldValueBuffer = ByteBuffer.allocate(fixedValueLength);
+    private final ByteBuffer newValueBuffer = ByteBuffer.allocate(fixedValueLength);
+    private final HashAlgorithm hashAlgorithm;
     private long hitCount = 0;
     private long size = 0;
     private long missCount = 0;
@@ -30,33 +37,15 @@ class SegmentWithMemoryPool<V> extends Segment<V> {
     private long putReplaceCount = 0;
     private long removeCount = 0;
     private long threshold = 0;
-    private final float loadFactor;
     private long rehashes = 0;
-
-    private final List<MemoryPoolChunk> chunks;
     private byte currentChunkIndex = -1;
-
-    private final int chunkSize;
-
-    private final MemoryPoolAddress emptyAddress = new MemoryPoolAddress((byte) -1, -1);
-
     private MemoryPoolAddress freeListHead = emptyAddress;
     private long freeListSize = 0;
-
-    private final int fixedSlotSize;
-
-    private final HashTableValueSerializer<V> valueSerializer;
-
     private Table table;
-
-    private final ByteBuffer oldValueBuffer = ByteBuffer.allocate(fixedValueLength);
-    private final ByteBuffer newValueBuffer = ByteBuffer.allocate(fixedValueLength);
-
-    private final HashAlgorithm hashAlgorithm;
 
     SegmentWithMemoryPool(OffHeapHashTableBuilder<V> builder) {
         super(builder.getValueSerializer(), builder.getFixedValueSize(), builder.getFixedKeySize(),
-              builder.getHasher());
+                builder.getHasher());
 
         this.chunks = new ArrayList<>();
         this.chunkSize = builder.getMemoryPoolChunkSize();
@@ -404,22 +393,32 @@ class SegmentWithMemoryPool<V> extends Segment<V> {
         }
     }
 
+    @VisibleForTesting
+    MemoryPoolAddress getFreeListHead() {
+        return freeListHead;
+    }
+
+    @VisibleForTesting
+    int getChunkWriteOffset(int index) {
+        return chunks.get(index).getWriteOffset();
+    }
+
     static final class Table {
 
         final int mask;
         final long address;
         private boolean released;
 
-        static Table create(int hashTableSize) {
-            int msz = Ints.checkedCast(HashTableUtil.MEMORY_POOL_BUCKET_ENTRY_LEN * hashTableSize);
-            long address = Uns.allocate(msz, true);
-            return address != 0L ? new Table(address, hashTableSize) : null;
-        }
-
         private Table(long address, int hashTableSize) {
             this.address = address;
             this.mask = hashTableSize - 1;
             clear();
+        }
+
+        static Table create(int hashTableSize) {
+            int msz = Ints.checkedCast(HashTableUtil.MEMORY_POOL_BUCKET_ENTRY_LEN * hashTableSize);
+            long address = Uns.allocate(msz, true);
+            return address != 0L ? new Table(address, hashTableSize) : null;
         }
 
         void clear() {
@@ -474,15 +473,5 @@ class SegmentWithMemoryPool<V> extends Segment<V> {
                 h.add(len + 1);
             }
         }
-    }
-
-    @VisibleForTesting
-    MemoryPoolAddress getFreeListHead() {
-        return freeListHead;
-    }
-
-    @VisibleForTesting
-    int getChunkWriteOffset(int index) {
-        return chunks.get(index).getWriteOffset();
     }
 }

@@ -8,18 +8,14 @@
 package com.oath.halodb;
 
 import org.testng.Assert;
-import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
-import java.util.HashSet;
 
-public class OffHeapHashTableBuilderTest
-{
-    
+public class OffHeapHashTableBuilderTest {
+
     @Test
-    public void testHashTableSize() throws Exception
-    {
+    public void testHashTableSize() throws Exception {
         OffHeapHashTableBuilder<String> builder = OffHeapHashTableBuilder.newBuilder();
         Assert.assertEquals(builder.getHashTableSize(), 8192);
         builder.hashTableSize(12345);
@@ -27,16 +23,14 @@ public class OffHeapHashTableBuilderTest
     }
 
     @Test
-    public void testChunkSize() throws Exception
-    {
+    public void testChunkSize() throws Exception {
         OffHeapHashTableBuilder<String> builder = OffHeapHashTableBuilder.newBuilder();
         builder.memoryPoolChunkSize(12345);
         Assert.assertEquals(builder.getMemoryPoolChunkSize(), 12345);
     }
 
     @Test
-    public void testSegmentCount() throws Exception
-    {
+    public void testSegmentCount() throws Exception {
         int cpus = Runtime.getRuntime().availableProcessors();
         int segments = cpus * 2;
         while (Integer.bitCount(segments) != 1)
@@ -49,8 +43,7 @@ public class OffHeapHashTableBuilderTest
     }
 
     @Test
-    public void testLoadFactor() throws Exception
-    {
+    public void testLoadFactor() throws Exception {
         OffHeapHashTableBuilder<String> builder = OffHeapHashTableBuilder.newBuilder();
         Assert.assertEquals(builder.getLoadFactor(), .75f);
         builder.loadFactor(12345);
@@ -58,25 +51,20 @@ public class OffHeapHashTableBuilderTest
     }
 
     @Test
-    public void testValueSerializer() throws Exception
-    {
+    public void testValueSerializer() throws Exception {
         OffHeapHashTableBuilder<String> builder = OffHeapHashTableBuilder.newBuilder();
         Assert.assertNull(builder.getValueSerializer());
 
-        HashTableValueSerializer<String> inst = new HashTableValueSerializer<String>()
-        {
-            public void serialize(String s, ByteBuffer out)
-            {
+        HashTableValueSerializer<String> inst = new HashTableValueSerializer<String>() {
+            public void serialize(String s, ByteBuffer out) {
 
             }
 
-            public String deserialize(ByteBuffer in)
-            {
+            public String deserialize(ByteBuffer in) {
                 return null;
             }
 
-            public int serializedSize(String s)
-            {
+            public int serializedSize(String s) {
                 return 0;
             }
         };

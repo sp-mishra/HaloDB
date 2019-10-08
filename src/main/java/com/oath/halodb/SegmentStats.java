@@ -24,7 +24,7 @@ class SegmentStats {
     @Override
     public String toString() {
         MoreObjects.ToStringHelper helper =
-            MoreObjects.toStringHelper("").add("noOfEntries", this.noOfEntries);
+                MoreObjects.toStringHelper("").add("noOfEntries", this.noOfEntries);
 
         // all these values will be -1 for non-memory pool, hence ignore. 
         if (numberOfChunks != -1) {
@@ -49,9 +49,9 @@ class SegmentStats {
 
         SegmentStats that = (SegmentStats) obj;
         return that.noOfEntries == noOfEntries
-               && that.numberOfChunks == numberOfChunks
-               && that.numberOfSlots == numberOfSlots
-               && that.freeListSize == freeListSize;
+                && that.numberOfChunks == numberOfChunks
+                && that.numberOfSlots == numberOfSlots
+                && that.freeListSize == freeListSize;
     }
 
     @Override

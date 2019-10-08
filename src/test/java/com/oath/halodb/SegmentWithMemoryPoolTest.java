@@ -6,15 +6,10 @@
 package com.oath.halodb;
 
 import com.google.common.collect.Lists;
-
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 public class SegmentWithMemoryPoolTest {
 
@@ -28,12 +23,12 @@ public class SegmentWithMemoryPoolTest {
         int fixedSlotSize = MemoryPoolHashEntries.HEADER_SIZE + fixedKeySize + fixedValueSize;
 
         OffHeapHashTableBuilder<byte[]> builder = OffHeapHashTableBuilder
-            .<byte[]>newBuilder()
-            .fixedKeySize(fixedKeySize)
-            .fixedValueSize(fixedValueSize)
-            // chunkSize set such that noOfEntries/2 can set filled in one. 
-            .memoryPoolChunkSize(noOfEntries/noOfChunks * fixedSlotSize)
-            .valueSerializer(HashTableTestUtils.byteArraySerializer);
+                .<byte[]>newBuilder()
+                .fixedKeySize(fixedKeySize)
+                .fixedValueSize(fixedValueSize)
+                // chunkSize set such that noOfEntries/2 can set filled in one.
+                .memoryPoolChunkSize(noOfEntries / noOfChunks * fixedSlotSize)
+                .valueSerializer(HashTableTestUtils.byteArraySerializer);
 
         SegmentWithMemoryPool<byte[]> segment = new SegmentWithMemoryPool<>(builder);
 
@@ -48,7 +43,7 @@ public class SegmentWithMemoryPoolTest {
 
         // All slots in chunk should be written to. 
         for (int i = 0; i < segment.numberOfChunks(); i++) {
-            Assert.assertEquals(segment.getChunkWriteOffset(i), noOfEntries/noOfChunks * fixedSlotSize);
+            Assert.assertEquals(segment.getChunkWriteOffset(i), noOfEntries / noOfChunks * fixedSlotSize);
         }
     }
 
@@ -62,12 +57,12 @@ public class SegmentWithMemoryPoolTest {
         MemoryPoolAddress emptyList = new MemoryPoolAddress((byte) -1, -1);
 
         OffHeapHashTableBuilder<byte[]> builder = OffHeapHashTableBuilder
-            .<byte[]>newBuilder()
-            .fixedKeySize(fixedKeySize)
-            .fixedValueSize(fixedValueSize)
-            // chunkSize set such that noOfEntries/2 can set filled in one.
-            .memoryPoolChunkSize(noOfEntries / chunkCount * fixedSlotSize)
-            .valueSerializer(HashTableTestUtils.byteArraySerializer);
+                .<byte[]>newBuilder()
+                .fixedKeySize(fixedKeySize)
+                .fixedValueSize(fixedValueSize)
+                // chunkSize set such that noOfEntries/2 can set filled in one.
+                .memoryPoolChunkSize(noOfEntries / chunkCount * fixedSlotSize)
+                .valueSerializer(HashTableTestUtils.byteArraySerializer);
 
         SegmentWithMemoryPool<byte[]> segment = new SegmentWithMemoryPool<>(builder);
 
@@ -106,14 +101,14 @@ public class SegmentWithMemoryPoolTest {
         // remove only some of the elements.
         Random r = new Random();
         int elementsRemoved = 0;
-        for (int i = 0; i < noOfEntries/3; i++) {
-            if(segment.removeEntry(records.get(r.nextInt(records.size())).keyBuffer))
+        for (int i = 0; i < noOfEntries / 3; i++) {
+            if (segment.removeEntry(records.get(r.nextInt(records.size())).keyBuffer))
                 elementsRemoved++;
         }
 
         Assert.assertEquals(segment.freeListSize(), elementsRemoved);
         Assert.assertNotEquals(segment.getFreeListHead(), emptyList);
-        Assert.assertEquals(segment.size(), noOfEntries-elementsRemoved);
+        Assert.assertEquals(segment.size(), noOfEntries - elementsRemoved);
 
         // add removed elements back.
         addEntriesToSegment(segment, hasher, elementsRemoved, fixedKeySize, fixedValueSize);
@@ -135,12 +130,12 @@ public class SegmentWithMemoryPoolTest {
         int noOfEntries = Byte.MAX_VALUE * 2;
 
         OffHeapHashTableBuilder<byte[]> builder = OffHeapHashTableBuilder
-            .<byte[]>newBuilder()
-            .fixedKeySize(fixedKeySize)
-            .fixedValueSize(fixedValueSize)
-            // chunkSize set so that each can contain only one entry.
-            .memoryPoolChunkSize(fixedSlotSize)
-            .valueSerializer(HashTableTestUtils.byteArraySerializer);
+                .<byte[]>newBuilder()
+                .fixedKeySize(fixedKeySize)
+                .fixedValueSize(fixedValueSize)
+                // chunkSize set so that each can contain only one entry.
+                .memoryPoolChunkSize(fixedSlotSize)
+                .valueSerializer(HashTableTestUtils.byteArraySerializer);
 
         SegmentWithMemoryPool<byte[]> segment = new SegmentWithMemoryPool<>(builder);
         addEntriesToSegment(segment, Hasher.create(HashAlgorithm.MURMUR3), noOfEntries, fixedKeySize, fixedValueSize);
@@ -156,12 +151,12 @@ public class SegmentWithMemoryPoolTest {
         int fixedSlotSize = MemoryPoolHashEntries.HEADER_SIZE + fixedKeySize + fixedValueSize;
 
         OffHeapHashTableBuilder<byte[]> builder = OffHeapHashTableBuilder
-            .<byte[]>newBuilder()
-            .fixedKeySize(fixedKeySize)
-            .fixedValueSize(fixedValueSize)
-            // chunkSize set such that noOfEntries/2 can set filled in one.
-            .memoryPoolChunkSize(noOfEntries/noOfChunks * fixedSlotSize)
-            .valueSerializer(HashTableTestUtils.byteArraySerializer);
+                .<byte[]>newBuilder()
+                .fixedKeySize(fixedKeySize)
+                .fixedValueSize(fixedValueSize)
+                // chunkSize set such that noOfEntries/2 can set filled in one.
+                .memoryPoolChunkSize(noOfEntries / noOfChunks * fixedSlotSize)
+                .valueSerializer(HashTableTestUtils.byteArraySerializer);
 
         SegmentWithMemoryPool<byte[]> segment = new SegmentWithMemoryPool<>(builder);
 
@@ -195,7 +190,7 @@ public class SegmentWithMemoryPoolTest {
 
         // All slots in chunk should be written to.
         for (int i = 0; i < segment.numberOfChunks(); i++) {
-            Assert.assertEquals(segment.getChunkWriteOffset(i), noOfEntries/noOfChunks * fixedSlotSize);
+            Assert.assertEquals(segment.getChunkWriteOffset(i), noOfEntries / noOfChunks * fixedSlotSize);
         }
     }
 
@@ -209,13 +204,13 @@ public class SegmentWithMemoryPoolTest {
         int fixedSlotSize = MemoryPoolHashEntries.HEADER_SIZE + fixedKeySize + fixedValueSize;
 
         OffHeapHashTableBuilder<byte[]> builder = OffHeapHashTableBuilder
-            .<byte[]>newBuilder()
-            .fixedKeySize(fixedKeySize)
-            .fixedValueSize(fixedValueSize)
-            .memoryPoolChunkSize(noOfEntries/noOfChunks * fixedSlotSize)
-            .hashTableSize(noOfEntries/8) // size of table less than number of entries, this will trigger a rehash.
-            .loadFactor(1)
-            .valueSerializer(HashTableTestUtils.byteArraySerializer);
+                .<byte[]>newBuilder()
+                .fixedKeySize(fixedKeySize)
+                .fixedValueSize(fixedValueSize)
+                .memoryPoolChunkSize(noOfEntries / noOfChunks * fixedSlotSize)
+                .hashTableSize(noOfEntries / 8) // size of table less than number of entries, this will trigger a rehash.
+                .loadFactor(1)
+                .valueSerializer(HashTableTestUtils.byteArraySerializer);
 
         SegmentWithMemoryPool<byte[]> segment = new SegmentWithMemoryPool<>(builder);
         Hasher hasher = Hasher.create(HashAlgorithm.MURMUR3);
@@ -227,7 +222,6 @@ public class SegmentWithMemoryPoolTest {
 
         records.forEach(r -> Assert.assertEquals(segment.getEntry(r.keyBuffer), r.value));
     }
-
 
 
     private List<Record> addEntriesToSegment(SegmentWithMemoryPool<byte[]> segment, Hasher hasher, int noOfEntries, int fixedKeySize, int fixedValueSize) {

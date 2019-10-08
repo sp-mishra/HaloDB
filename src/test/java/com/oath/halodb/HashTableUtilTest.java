@@ -7,18 +7,14 @@
 
 package com.oath.halodb;
 
-import com.oath.halodb.HashTableUtil;
-
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-public class HashTableUtilTest
-{
+public class HashTableUtilTest {
     static final long BIG = 2L << 40;
 
     @Test
-    public void testBitNum()
-    {
+    public void testBitNum() {
         Assert.assertEquals(HashTableUtil.bitNum(0), 0);
         Assert.assertEquals(HashTableUtil.bitNum(1), 1);
         Assert.assertEquals(HashTableUtil.bitNum(2), 2);

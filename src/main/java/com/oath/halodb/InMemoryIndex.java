@@ -6,7 +6,6 @@
 package com.oath.halodb;
 
 import com.google.common.primitives.Ints;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,12 +27,12 @@ class InMemoryIndex {
         maxSizeOfEachSegment = Ints.checkedCast(Utils.roundUpToPowerOf2(numberOfKeys / noOfSegments));
         long start = System.currentTimeMillis();
         OffHeapHashTableBuilder<InMemoryIndexMetaData> builder =
-            OffHeapHashTableBuilder.<InMemoryIndexMetaData>newBuilder()
-                .valueSerializer(new InMemoryIndexMetaDataSerializer())
-                .segmentCount(noOfSegments)
-                .hashTableSize(maxSizeOfEachSegment)
-                .fixedValueSize(InMemoryIndexMetaData.SERIALIZED_SIZE)
-                .loadFactor(1);
+                OffHeapHashTableBuilder.<InMemoryIndexMetaData>newBuilder()
+                        .valueSerializer(new InMemoryIndexMetaDataSerializer())
+                        .segmentCount(noOfSegments)
+                        .hashTableSize(maxSizeOfEachSegment)
+                        .fixedValueSize(InMemoryIndexMetaData.SERIALIZED_SIZE)
+                        .loadFactor(1);
 
         if (useMemoryPool) {
             builder.useMemoryPool(true).fixedKeySize(fixedKeySize).memoryPoolChunkSize(memoryPoolChunkSize);

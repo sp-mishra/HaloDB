@@ -4,13 +4,7 @@
  */
 package com.oath.halodb.benchmarks;
 
-import org.rocksdb.CompressionType;
-import org.rocksdb.Env;
-import org.rocksdb.Options;
-import org.rocksdb.RocksDB;
-import org.rocksdb.RocksDBException;
-import org.rocksdb.Statistics;
-import org.rocksdb.WriteOptions;
+import org.rocksdb.*;
 
 import java.io.File;
 import java.util.Arrays;
@@ -18,12 +12,11 @@ import java.util.List;
 
 public class RocksDBStorageEngine implements StorageEngine {
 
+    private final File dbDirectory;
     private RocksDB db;
     private Options options;
     private Statistics statistics;
     private WriteOptions writeOptions;
-
-    private final File dbDirectory;
 
     public RocksDBStorageEngine(File dbDirectory, int noOfRecords) {
         this.dbDirectory = dbDirectory;
@@ -91,14 +84,14 @@ public class RocksDBStorageEngine implements StorageEngine {
         System.out.printf("targetFileSizeMultiplier %d \n", options.targetFileSizeMultiplier());
 
         List<CompressionType> compressionLevels =
-            Arrays.asList(
-                CompressionType.NO_COMPRESSION,
-                CompressionType.NO_COMPRESSION,
-                CompressionType.SNAPPY_COMPRESSION,
-                CompressionType.SNAPPY_COMPRESSION,
-                CompressionType.SNAPPY_COMPRESSION,
-                CompressionType.SNAPPY_COMPRESSION
-            );
+                Arrays.asList(
+                        CompressionType.NO_COMPRESSION,
+                        CompressionType.NO_COMPRESSION,
+                        CompressionType.SNAPPY_COMPRESSION,
+                        CompressionType.SNAPPY_COMPRESSION,
+                        CompressionType.SNAPPY_COMPRESSION,
+                        CompressionType.SNAPPY_COMPRESSION
+                );
 
         options.setCompressionPerLevel(compressionLevels);
 

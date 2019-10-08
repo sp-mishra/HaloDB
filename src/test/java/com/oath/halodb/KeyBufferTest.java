@@ -10,38 +10,31 @@ package com.oath.halodb;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
-
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.*;
 
-public class KeyBufferTest
-{
+public class KeyBufferTest {
     @AfterMethod(alwaysRun = true)
-    public void deinit()
-    {
+    public void deinit() {
         Uns.clearUnsDebugForTest();
     }
 
     @DataProvider
-    public Object[][] hashes()
-    {
+    public Object[][] hashes() {
         return new Object[][]{
-        { HashAlgorithm.MURMUR3 },
-        { HashAlgorithm.CRC32 },
-        // TODO { HashAlgorithm.XX }
+                {HashAlgorithm.MURMUR3},
+                {HashAlgorithm.CRC32},
+                // TODO { HashAlgorithm.XX }
         };
     }
 
     @Test(dataProvider = "hashes")
-    public void testHashFinish(HashAlgorithm hashAlgorithm) throws Exception
-    {
+    public void testHashFinish(HashAlgorithm hashAlgorithm) throws Exception {
 
         ByteBuffer buf = ByteBuffer.allocate(12);
         byte[] ref = TestUtils.generateRandomByteArray(10);
@@ -61,11 +54,9 @@ public class KeyBufferTest
         assertEquals(out.hash(), longHash);
     }
 
-    private long hash(Hasher hasher)
-    {
+    private long hash(Hasher hasher) {
         HashCode hash = hasher.hash();
-        if (hash.bits() == 32)
-        {
+        if (hash.bits() == 32) {
             long longHash = hash.asInt();
             longHash = longHash << 32 | (longHash & 0xffffffffL);
             return longHash;
@@ -73,10 +64,8 @@ public class KeyBufferTest
         return hash.asLong();
     }
 
-    private Hasher hasher(HashAlgorithm hashAlgorithm)
-    {
-        switch (hashAlgorithm)
-        {
+    private Hasher hasher(HashAlgorithm hashAlgorithm) {
+        switch (hashAlgorithm) {
             case MURMUR3:
                 return Hashing.murmur3_128().newHasher();
             case CRC32:
@@ -87,8 +76,7 @@ public class KeyBufferTest
     }
 
     @Test(dataProvider = "hashes", dependsOnMethods = "testHashFinish")
-    public void testHashFinish16(HashAlgorithm hashAlgorithm) throws Exception
-    {
+    public void testHashFinish16(HashAlgorithm hashAlgorithm) throws Exception {
 
         byte[] ref = TestUtils.generateRandomByteArray(14);
         ByteBuffer buf = ByteBuffer.allocate(16);
@@ -108,12 +96,9 @@ public class KeyBufferTest
     }
 
     @Test(dataProvider = "hashes", dependsOnMethods = "testHashFinish16")
-    public void testHashRandom(HashAlgorithm hashAlgorithm) throws Exception
-    {
-        for (int i = 1; i < 4100; i++)
-        {
-            for (int j = 0; j < 10; j++)
-            {
+    public void testHashRandom(HashAlgorithm hashAlgorithm) throws Exception {
+        for (int i = 1; i < 4100; i++) {
+            for (int j = 0; j < 10; j++) {
 
                 byte[] ref = TestUtils.generateRandomByteArray(i);
                 ByteBuffer buf = ByteBuffer.allocate(i);

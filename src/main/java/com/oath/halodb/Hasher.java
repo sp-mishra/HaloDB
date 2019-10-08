@@ -34,10 +34,10 @@ abstract class Hasher {
 
     private static String forAlg(HashAlgorithm hashAlgorithm) {
         return Hasher.class.getName()
-               + '$'
-               + hashAlgorithm.name().substring(0, 1)
-               + hashAlgorithm.name().substring(1).toLowerCase()
-               + "Hash";
+                + '$'
+                + hashAlgorithm.name().substring(0, 1)
+                + hashAlgorithm.name().substring(1).toLowerCase()
+                + "Hash";
     }
 
     abstract long hash(byte[] array);
@@ -60,6 +60,60 @@ abstract class Hasher {
     }
 
     static final class Murmur3Hash extends Hasher {
+
+        static final long C1 = 0x87c37b91114253d5L;
+        static final long C2 = 0x4cf5ad432745937fL;
+
+        private static long getLong(byte[] array, int o) {
+            long l = toLong(array[o + 7]) << 56;
+            l |= toLong(array[o + 6]) << 48;
+            l |= toLong(array[o + 5]) << 40;
+            l |= toLong(array[o + 4]) << 32;
+            l |= toLong(array[o + 3]) << 24;
+            l |= toLong(array[o + 2]) << 16;
+            l |= toLong(array[o + 1]) << 8;
+            l |= toLong(array[o]);
+            return l;
+        }
+
+        private static long getLong(long adr, long o) {
+            long l = toLong(Uns.getByte(adr, o + 7)) << 56;
+            l |= toLong(Uns.getByte(adr, o + 6)) << 48;
+            l |= toLong(Uns.getByte(adr, o + 5)) << 40;
+            l |= toLong(Uns.getByte(adr, o + 4)) << 32;
+            l |= toLong(Uns.getByte(adr, o + 3)) << 24;
+            l |= toLong(Uns.getByte(adr, o + 2)) << 16;
+            l |= toLong(Uns.getByte(adr, o + 1)) << 8;
+            l |= toLong(Uns.getByte(adr, o));
+            return l;
+        }
+
+        static long fmix64(long k) {
+            k ^= k >>> 33;
+            k *= 0xff51afd7ed558ccdL;
+            k ^= k >>> 33;
+            k *= 0xc4ceb9fe1a85ec53L;
+            k ^= k >>> 33;
+            return k;
+        }
+
+        static long mixK1(long k1) {
+            k1 *= C1;
+            k1 = Long.rotateLeft(k1, 31);
+            k1 *= C2;
+            return k1;
+        }
+
+        static long mixK2(long k2) {
+            k2 *= C2;
+            k2 = Long.rotateLeft(k2, 33);
+            k2 *= C1;
+            return k2;
+        }
+
+        static long toLong(byte value) {
+            return value & 0xff;
+        }
 
         long hash(byte[] array) {
             int o = 0;
@@ -152,18 +206,6 @@ abstract class Hasher {
             return h1;
         }
 
-        private static long getLong(byte[] array, int o) {
-            long l = toLong(array[o + 7]) << 56;
-            l |= toLong(array[o + 6]) << 48;
-            l |= toLong(array[o + 5]) << 40;
-            l |= toLong(array[o + 4]) << 32;
-            l |= toLong(array[o + 3]) << 24;
-            l |= toLong(array[o + 2]) << 16;
-            l |= toLong(array[o + 1]) << 8;
-            l |= toLong(array[o]);
-            return l;
-        }
-
         long hash(long adr, long offset, int length) {
             long o = offset;
             long r = length;
@@ -254,48 +296,6 @@ abstract class Hasher {
             // padToLong()
 
             return h1;
-        }
-
-        private static long getLong(long adr, long o) {
-            long l = toLong(Uns.getByte(adr, o + 7)) << 56;
-            l |= toLong(Uns.getByte(adr, o + 6)) << 48;
-            l |= toLong(Uns.getByte(adr, o + 5)) << 40;
-            l |= toLong(Uns.getByte(adr, o + 4)) << 32;
-            l |= toLong(Uns.getByte(adr, o + 3)) << 24;
-            l |= toLong(Uns.getByte(adr, o + 2)) << 16;
-            l |= toLong(Uns.getByte(adr, o + 1)) << 8;
-            l |= toLong(Uns.getByte(adr, o));
-            return l;
-        }
-
-        static final long C1 = 0x87c37b91114253d5L;
-        static final long C2 = 0x4cf5ad432745937fL;
-
-        static long fmix64(long k) {
-            k ^= k >>> 33;
-            k *= 0xff51afd7ed558ccdL;
-            k ^= k >>> 33;
-            k *= 0xc4ceb9fe1a85ec53L;
-            k ^= k >>> 33;
-            return k;
-        }
-
-        static long mixK1(long k1) {
-            k1 *= C1;
-            k1 = Long.rotateLeft(k1, 31);
-            k1 *= C2;
-            return k1;
-        }
-
-        static long mixK2(long k2) {
-            k2 *= C2;
-            k2 = Long.rotateLeft(k2, 33);
-            k2 *= C1;
-            return k2;
-        }
-
-        static long toLong(byte value) {
-            return value & 0xff;
         }
     }
 

@@ -10,6 +10,8 @@ package com.oath.halodb;
 interface NativeMemoryAllocator {
 
     long allocate(long size);
+
     void free(long peer);
+
     long getTotalAllocated();
 }

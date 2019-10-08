@@ -9,7 +9,6 @@ package com.oath.halodb;
 
 import com.google.common.primitives.Ints;
 import com.oath.halodb.histo.EstimatedHistogram;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,12 +30,9 @@ final class OffHeapHashTableImpl<V> implements OffHeapHashTable<V> {
     private final int segmentShift;
 
     private final int segmentCount;
-
-    private volatile long putFailCount;
-
-    private boolean closed;
-
     private final Hasher hasher;
+    private volatile long putFailCount;
+    private boolean closed;
 
     OffHeapHashTableImpl(OffHeapHashTableBuilder<V> builder) {
         this.hasher = Hasher.create(builder.getHashAlgorighm());
@@ -204,7 +200,7 @@ final class OffHeapHashTableImpl<V> implements OffHeapHashTable<V> {
 
     public OffHeapHashTableStats stats() {
         long hitCount = 0, missCount = 0, size = 0,
-            freeCapacity = 0, rehashes = 0, putAddCount = 0, putReplaceCount = 0, removeCount = 0;
+                freeCapacity = 0, rehashes = 0, putAddCount = 0, putReplaceCount = 0, removeCount = 0;
         for (Segment map : segments) {
             hitCount += map.hitCount();
             missCount += map.missCount();
@@ -216,15 +212,15 @@ final class OffHeapHashTableImpl<V> implements OffHeapHashTable<V> {
         }
 
         return new OffHeapHashTableStats(
-            hitCount,
-            missCount,
-            size,
-            rehashes,
-            putAddCount,
-            putReplaceCount,
-            putFailCount,
-            removeCount,
-            perSegmentStats());
+                hitCount,
+                missCount,
+                size,
+                rehashes,
+                putAddCount,
+                putReplaceCount,
+                putFailCount,
+                removeCount,
+                perSegmentStats());
     }
 
     public long size() {

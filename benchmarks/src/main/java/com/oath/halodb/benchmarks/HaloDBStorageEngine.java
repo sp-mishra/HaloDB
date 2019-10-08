@@ -14,9 +14,8 @@ import java.io.File;
 public class HaloDBStorageEngine implements StorageEngine {
 
     private final File dbDirectory;
-
-    private HaloDB db;
     private final long noOfRecords;
+    private HaloDB db;
 
     public HaloDBStorageEngine(File dbDirectory, long noOfRecords) {
         this.dbDirectory = dbDirectory;
@@ -56,7 +55,7 @@ public class HaloDBStorageEngine implements StorageEngine {
     @Override
     public void open() {
         HaloDBOptions opts = new HaloDBOptions();
-        opts.setMaxFileSize(1024*1024*1024);
+        opts.setMaxFileSize(1024 * 1024 * 1024);
         opts.setCompactionThresholdPerFile(0.50);
         opts.setFlushDataSizeBytes(10 * 1024 * 1024);
         opts.setNumberOfRecords(Ints.checkedCast(2 * noOfRecords));
@@ -73,7 +72,7 @@ public class HaloDBStorageEngine implements StorageEngine {
 
     @Override
     public void close() {
-        if (db != null){
+        if (db != null) {
             try {
                 db.close();
             } catch (HaloDBException e) {
@@ -90,7 +89,7 @@ public class HaloDBStorageEngine implements StorageEngine {
 
     @Override
     public void printStats() {
-        
+
     }
 
     @Override

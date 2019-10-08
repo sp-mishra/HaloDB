@@ -9,11 +9,13 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SeekableByteChannel;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.zip.CRC32;
 
+import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.nio.file.StandardOpenOption.*;
-import static java.nio.file.StandardCopyOption.*;
 
 /**
  * Represents the Metadata for the DB, stored in METADATA_FILE_NAME,
@@ -21,6 +23,7 @@ import static java.nio.file.StandardCopyOption.*;
  */
 class DBMetaData {
 
+    static final String METADATA_FILE_NAME = "META";
     /**
      * checksum         - 4 bytes
      * version          - 1 byte.
@@ -29,22 +32,17 @@ class DBMetaData {
      * io error         - 1 byte.
      * file size        - 4 byte.
      */
-    private final static int META_DATA_SIZE = 4+1+1+8+1+4;
+    private final static int META_DATA_SIZE = 4 + 1 + 1 + 8 + 1 + 4;
     private final static int checkSumSize = 4;
     private final static int checkSumOffset = 0;
-
+    private final static Object lock = new Object();
+    private final DBDirectory dbDirectory;
     private long checkSum = 0;
     private int version = 0;
     private boolean open = false;
     private long sequenceNumber = 0;
     private boolean ioError = false;
     private int maxFileSize = 0;
-
-    private final DBDirectory dbDirectory;
-
-    static final String METADATA_FILE_NAME = "META";
-
-    private final static Object lock = new Object();
 
     DBMetaData(DBDirectory dbDirectory) {
         this.dbDirectory = dbDirectory;
@@ -74,17 +72,17 @@ class DBMetaData {
             String tempFileName = METADATA_FILE_NAME + ".temp";
             Path tempFile = dbDirectory.getPath().resolve(tempFileName);
             Files.deleteIfExists(tempFile);
-            try(FileChannel channel = FileChannel.open(tempFile, WRITE, CREATE, SYNC)) {
+            try (FileChannel channel = FileChannel.open(tempFile, WRITE, CREATE, SYNC)) {
                 ByteBuffer buff = ByteBuffer.allocate(META_DATA_SIZE);
                 buff.position(checkSumSize);
-                buff.put((byte)version);
-                buff.put((byte)(open ? 0xFF : 0));
+                buff.put((byte) version);
+                buff.put((byte) (open ? 0xFF : 0));
                 buff.putLong(sequenceNumber);
-                buff.put((byte)(ioError ? 0xFF : 0));
+                buff.put((byte) (ioError ? 0xFF : 0));
                 buff.putInt(maxFileSize);
 
                 long crc32 = computeCheckSum(buff.array());
-                buff.putInt(checkSumOffset, (int)crc32);
+                buff.putInt(checkSumOffset, (int) crc32);
 
                 buff.flip();
                 channel.write(buff);
@@ -103,10 +101,10 @@ class DBMetaData {
     boolean isValid() {
         ByteBuffer buff = ByteBuffer.allocate(META_DATA_SIZE);
         buff.position(checkSumSize);
-        buff.put((byte)version);
-        buff.put((byte)(open ? 0xFF : 0));
+        buff.put((byte) version);
+        buff.put((byte) (open ? 0xFF : 0));
         buff.putLong(sequenceNumber);
-        buff.put((byte)(ioError ? 0xFF : 0));
+        buff.put((byte) (ioError ? 0xFF : 0));
         buff.putInt(maxFileSize);
 
         return computeCheckSum(buff.array()) == checkSum;

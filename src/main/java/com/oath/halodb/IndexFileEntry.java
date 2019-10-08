@@ -14,7 +14,7 @@ import java.util.zip.CRC32;
 class IndexFileEntry {
 
     /**
-     * checksum         - 4 bytes. 
+     * checksum         - 4 bytes.
      * version          - 1 byte.
      * Key size         - 1 bytes.
      * record size      - 4 bytes.
@@ -48,22 +48,7 @@ class IndexFileEntry {
         this.version = version;
         this.checkSum = checkSum;
 
-        this.keySize = (byte)key.length;
-    }
-
-    ByteBuffer[] serialize() {
-        byte[] header = new byte[INDEX_FILE_HEADER_SIZE];
-        ByteBuffer h = ByteBuffer.wrap(header);
-
-        h.put(VERSION_OFFSET, (byte)version);
-        h.put(KEY_SIZE_OFFSET, keySize);
-        h.putInt(RECORD_SIZE_OFFSET, recordSize);
-        h.putInt(RECORD_OFFSET, recordOffset);
-        h.putLong(SEQUENCE_NUMBER_OFFSET, sequenceNumber);
-        long crc32 = computeCheckSum(h.array());
-        h.putInt(CHECKSUM_OFFSET, Utils.toSignedIntFromLong(crc32));
-
-        return new ByteBuffer[] { h, ByteBuffer.wrap(key) };
+        this.keySize = (byte) key.length;
     }
 
     static IndexFileEntry deserialize(ByteBuffer buffer) {
@@ -92,9 +77,9 @@ class IndexFileEntry {
         int offset = buffer.getInt();
         long sequenceNumber = buffer.getLong();
         if (sequenceNumber < 0 || keySize <= 0
-            || version < 0 || version > 255
-            || recordSize <= 0 || offset < 0
-            || buffer.remaining() < keySize) {
+                || version < 0 || version > 255
+                || recordSize <= 0 || offset < 0
+                || buffer.remaining() < keySize) {
             return null;
         }
 
@@ -109,6 +94,21 @@ class IndexFileEntry {
         return entry;
     }
 
+    ByteBuffer[] serialize() {
+        byte[] header = new byte[INDEX_FILE_HEADER_SIZE];
+        ByteBuffer h = ByteBuffer.wrap(header);
+
+        h.put(VERSION_OFFSET, (byte) version);
+        h.put(KEY_SIZE_OFFSET, keySize);
+        h.putInt(RECORD_SIZE_OFFSET, recordSize);
+        h.putInt(RECORD_OFFSET, recordOffset);
+        h.putLong(SEQUENCE_NUMBER_OFFSET, sequenceNumber);
+        long crc32 = computeCheckSum(h.array());
+        h.putInt(CHECKSUM_OFFSET, Utils.toSignedIntFromLong(crc32));
+
+        return new ByteBuffer[]{h, ByteBuffer.wrap(key)};
+    }
+
     private long computeCheckSum(byte[] header) {
         CRC32 crc32 = new CRC32();
         crc32.update(header, CHECKSUM_OFFSET + CHECKSUM_SIZE, INDEX_FILE_HEADER_SIZE - CHECKSUM_SIZE);
@@ -118,7 +118,7 @@ class IndexFileEntry {
 
     long computeCheckSum() {
         ByteBuffer header = ByteBuffer.allocate(INDEX_FILE_HEADER_SIZE);
-        header.put(VERSION_OFFSET, (byte)version);
+        header.put(VERSION_OFFSET, (byte) version);
         header.put(KEY_SIZE_OFFSET, keySize);
         header.putInt(RECORD_SIZE_OFFSET, recordSize);
         header.putInt(RECORD_OFFSET, recordOffset);

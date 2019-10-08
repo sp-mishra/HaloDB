@@ -4,9 +4,9 @@
  */
 package com.oath.halodb.benchmarks;
 
-import java.io.File;
-
 import kyotocabinet.DB;
+
+import java.io.File;
 
 public class KyotoStorageEngine implements StorageEngine {
 
@@ -39,7 +39,7 @@ public class KyotoStorageEngine implements StorageEngine {
 
         if (!db.open(fileNameBuilder.toString(), mode)) {
             throw new IllegalArgumentException(String.format("KC db %s open error: " + db.error(),
-                                                             fileNameBuilder.toString()));
+                    fileNameBuilder.toString()));
         }
     }
 

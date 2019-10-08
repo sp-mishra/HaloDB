@@ -13,36 +13,33 @@ import java.util.Map;
 
 public class HaloDBStats {
 
+    private static final String gbRateUnit = " GB/second";
+    private static final String mbRateUnit = " MB/second";
+    private static final String kbRateUnit = " KB/second";
+    private static final long GB = 1024 * 1024 * 1024;
+    private static final long MB = 1024 * 1024;
+    private static final long KB = 1024;
     private final long statsResetTime;
-
     private final long size;
-
     private final int numberOfFilesPendingCompaction;
     private final Map<Integer, Double> staleDataPercentPerFile;
-
     private final long rehashCount;
     private final long numberOfSegments;
     private final long maxSizePerSegment;
     private final SegmentStats[] segmentStats;
-
     private final long numberOfTombstonesFoundDuringOpen;
     private final long numberOfTombstonesCleanedUpDuringOpen;
-
     private final int numberOfDataFiles;
     private final int numberOfTombstoneFiles;
-
     private final long numberOfRecordsCopied;
     private final long numberOfRecordsReplaced;
     private final long numberOfRecordsScanned;
     private final long sizeOfRecordsCopied;
     private final long sizeOfFilesDeleted;
     private final long sizeReclaimed;
-
     private final long compactionRateInInternal;
     private final long compactionRateSinceBeginning;
-
     private final boolean isCompactionRunning;
-
     private final HaloDBOptions options;
 
     public HaloDBStats(long statsResetTime, long size, boolean isCompactionRunning, int numberOfFilesPendingCompaction,
@@ -74,11 +71,10 @@ public class HaloDBStats {
         this.compactionRateSinceBeginning = compactionRateSinceBeginning;
         this.isCompactionRunning = isCompactionRunning;
 
-        long intervalTimeInSeconds = (System.currentTimeMillis() - statsResetTime)/1000;
+        long intervalTimeInSeconds = (System.currentTimeMillis() - statsResetTime) / 1000;
         if (intervalTimeInSeconds > 0) {
-            this.compactionRateInInternal = sizeOfRecordsCopied/intervalTimeInSeconds;
-        }
-        else {
+            this.compactionRateInInternal = sizeOfRecordsCopied / intervalTimeInSeconds;
+        } else {
             this.compactionRateInInternal = 0;
         }
 
@@ -172,29 +168,29 @@ public class HaloDBStats {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper("")
-            .add("statsResetTime", statsResetTime)
-            .add("size", size)
-            .add("Options", options)
-            .add("isCompactionRunning", isCompactionRunning)
-            .add("CompactionJobRateInInterval", getUnit(compactionRateInInternal))
-            .add("CompactionJobRateSinceBeginning", getUnit(compactionRateSinceBeginning))
-            .add("numberOfFilesPendingCompaction", numberOfFilesPendingCompaction)
-            .add("numberOfRecordsCopied", numberOfRecordsCopied)
-            .add("numberOfRecordsReplaced", numberOfRecordsReplaced)
-            .add("numberOfRecordsScanned", numberOfRecordsScanned)
-            .add("sizeOfRecordsCopied", sizeOfRecordsCopied)
-            .add("sizeOfFilesDeleted", sizeOfFilesDeleted)
-            .add("sizeReclaimed", sizeReclaimed)
-            .add("rehashCount", rehashCount)
-            .add("maxSizePerSegment", maxSizePerSegment)
-            .add("numberOfDataFiles", numberOfDataFiles)
-            .add("numberOfTombstoneFiles", numberOfTombstoneFiles)
-            .add("numberOfTombstonesFoundDuringOpen", numberOfTombstonesFoundDuringOpen)
-            .add("numberOfTombstonesCleanedUpDuringOpen", numberOfTombstonesCleanedUpDuringOpen)
-            .add("segmentStats", Arrays.toString(segmentStats))
-            .add("numberOfSegments", numberOfSegments)
-            .add("staleDataPercentPerFile", staleDataMapToString())
-            .toString();
+                .add("statsResetTime", statsResetTime)
+                .add("size", size)
+                .add("Options", options)
+                .add("isCompactionRunning", isCompactionRunning)
+                .add("CompactionJobRateInInterval", getUnit(compactionRateInInternal))
+                .add("CompactionJobRateSinceBeginning", getUnit(compactionRateSinceBeginning))
+                .add("numberOfFilesPendingCompaction", numberOfFilesPendingCompaction)
+                .add("numberOfRecordsCopied", numberOfRecordsCopied)
+                .add("numberOfRecordsReplaced", numberOfRecordsReplaced)
+                .add("numberOfRecordsScanned", numberOfRecordsScanned)
+                .add("sizeOfRecordsCopied", sizeOfRecordsCopied)
+                .add("sizeOfFilesDeleted", sizeOfFilesDeleted)
+                .add("sizeReclaimed", sizeReclaimed)
+                .add("rehashCount", rehashCount)
+                .add("maxSizePerSegment", maxSizePerSegment)
+                .add("numberOfDataFiles", numberOfDataFiles)
+                .add("numberOfTombstoneFiles", numberOfTombstoneFiles)
+                .add("numberOfTombstonesFoundDuringOpen", numberOfTombstonesFoundDuringOpen)
+                .add("numberOfTombstonesCleanedUpDuringOpen", numberOfTombstonesCleanedUpDuringOpen)
+                .add("segmentStats", Arrays.toString(segmentStats))
+                .add("numberOfSegments", numberOfSegments)
+                .add("staleDataPercentPerFile", staleDataMapToString())
+                .toString();
     }
 
     public Map<String, String> toStringMap() {
@@ -243,14 +239,6 @@ public class HaloDBStats {
         builder.append("]");
         return builder.toString();
     }
-
-    private static final String gbRateUnit = " GB/second";
-    private static final String mbRateUnit = " MB/second";
-    private static final String kbRateUnit = " KB/second";
-
-    private static final long GB = 1024 * 1024 * 1024;
-    private static final long MB = 1024 * 1024;
-    private static final long KB = 1024;
 
     private String getUnit(long value) {
         long temp = value / GB;

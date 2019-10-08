@@ -25,14 +25,14 @@ public class IndexFileEntryTest {
         int version = 200;
 
         ByteBuffer header = ByteBuffer.allocate(INDEX_FILE_HEADER_SIZE);
-        header.put(VERSION_OFFSET, (byte)version);
+        header.put(VERSION_OFFSET, (byte) version);
         header.put(KEY_SIZE_OFFSET, keySize);
         header.putInt(RECORD_SIZE_OFFSET, recordSize);
         header.putInt(RECORD_OFFSET, recordOffset);
         header.putLong(SEQUENCE_NUMBER_OFFSET, sequenceNumber);
 
         CRC32 crc32 = new CRC32();
-        crc32.update(header.array(), VERSION_OFFSET, INDEX_FILE_HEADER_SIZE-CHECKSUM_SIZE);
+        crc32.update(header.array(), VERSION_OFFSET, INDEX_FILE_HEADER_SIZE - CHECKSUM_SIZE);
         crc32.update(key);
         long checkSum = crc32.getValue();
         header.putInt(CHECKSUM_OFFSET, Utils.toSignedIntFromLong(checkSum));
@@ -55,8 +55,8 @@ public class IndexFileEntryTest {
         long checksum = 42323;
 
         ByteBuffer header = ByteBuffer.allocate(IndexFileEntry.INDEX_FILE_HEADER_SIZE + keySize);
-        header.putInt((int)checksum);
-        header.put((byte)version);
+        header.putInt((int) checksum);
+        header.put((byte) version);
         header.put(keySize);
         header.putInt(recordSize);
         header.putInt(recordOffset);

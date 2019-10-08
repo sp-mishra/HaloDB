@@ -9,7 +9,6 @@ package com.oath.halodb;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import sun.misc.Unsafe;
 
 import java.io.IOException;
@@ -37,83 +36,15 @@ final class Uns {
     //
     private static final ConcurrentMap<Long, AllocInfo> ohDebug = __DEBUG_OFF_HEAP_MEMORY_ACCESS ? new ConcurrentHashMap<Long, AllocInfo>(16384) : null;
     private static final Map<Long, Throwable> ohFreeDebug = __DEBUG_OFF_HEAP_MEMORY_ACCESS ? new ConcurrentHashMap<Long, Throwable>(16384) : null;
-
-    private static final class AllocInfo {
-
-        final long size;
-        final Throwable trace;
-
-        AllocInfo(Long size, Throwable trace) {
-            this.size = size;
-            this.trace = trace;
-        }
-    }
-
-    static void clearUnsDebugForTest() {
-        if (__DEBUG_OFF_HEAP_MEMORY_ACCESS) {
-            try {
-                if (!ohDebug.isEmpty()) {
-                    for (Map.Entry<Long, AllocInfo> addrSize : ohDebug.entrySet()) {
-                        System.err.printf("  still allocated: address=%d, size=%d%n", addrSize.getKey(), addrSize.getValue().size);
-                        addrSize.getValue().trace.printStackTrace();
-                    }
-                    throw new RuntimeException("Not all allocated memory has been freed!");
-                }
-            } finally {
-                ohDebug.clear();
-                ohFreeDebug.clear();
-            }
-        }
-    }
-
-    private static void freed(long address) {
-        if (__DEBUG_OFF_HEAP_MEMORY_ACCESS) {
-            AllocInfo allocInfo = ohDebug.remove(address);
-            if (allocInfo == null) {
-                Throwable freedAt = ohFreeDebug.get(address);
-                throw new IllegalStateException("Free of unallocated region " + address, freedAt);
-            }
-            ohFreeDebug.put(address, new Exception("free backtrace - t=" + System.nanoTime()));
-        }
-    }
-
-    private static void allocated(long address, long bytes) {
-        if (__DEBUG_OFF_HEAP_MEMORY_ACCESS) {
-            AllocInfo allocatedLen =
-                ohDebug.putIfAbsent(address, new AllocInfo(bytes, new Exception("Thread: " + Thread.currentThread())));
-            if (allocatedLen != null) {
-                throw new Error("Oops - allocate() got duplicate address");
-            }
-            ohFreeDebug.remove(address);
-        }
-    }
-
-    private static void validate(long address, long offset, long len) {
-        if (__DEBUG_OFF_HEAP_MEMORY_ACCESS) {
-            if (address == 0L) {
-                throw new NullPointerException();
-            }
-            AllocInfo allocInfo = ohDebug.get(address);
-            if (allocInfo == null) {
-                Throwable freedAt = ohFreeDebug.get(address);
-                throw new IllegalStateException("Access to unallocated region " + address + " - t=" + System.nanoTime(), freedAt);
-            }
-            if (offset < 0L) {
-                throw new IllegalArgumentException("Negative offset");
-            }
-            if (len < 0L) {
-                throw new IllegalArgumentException("Negative length");
-            }
-            if (offset + len > allocInfo.size) {
-                throw new IllegalArgumentException("Access outside allocated region");
-            }
-        }
-    }
+    private static final UnsExt ext;
+    private static final Class<?> DIRECT_BYTE_BUFFER_CLASS;
+    private static final Class<?> DIRECT_BYTE_BUFFER_CLASS_R;
+    private static final long DIRECT_BYTE_BUFFER_ADDRESS_OFFSET;
+    private static final long DIRECT_BYTE_BUFFER_CAPACITY_OFFSET;
     //
     // #endif
     //
-
-    private static final UnsExt ext;
+    private static final long DIRECT_BYTE_BUFFER_LIMIT_OFFSET;
 
     static {
         try {
@@ -166,7 +97,84 @@ final class Uns {
         }
     }
 
+    static {
+        try {
+            ByteBuffer directBuffer = ByteBuffer.allocateDirect(0);
+            ByteBuffer directReadOnly = directBuffer.asReadOnlyBuffer();
+            Class<?> clazz = directBuffer.getClass();
+            Class<?> clazzReadOnly = directReadOnly.getClass();
+            DIRECT_BYTE_BUFFER_ADDRESS_OFFSET = unsafe.objectFieldOffset(Buffer.class.getDeclaredField("address"));
+            DIRECT_BYTE_BUFFER_CAPACITY_OFFSET = unsafe.objectFieldOffset(Buffer.class.getDeclaredField("capacity"));
+            DIRECT_BYTE_BUFFER_LIMIT_OFFSET = unsafe.objectFieldOffset(Buffer.class.getDeclaredField("limit"));
+            DIRECT_BYTE_BUFFER_CLASS = clazz;
+            DIRECT_BYTE_BUFFER_CLASS_R = clazzReadOnly;
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private Uns() {
+    }
+
+    static void clearUnsDebugForTest() {
+        if (__DEBUG_OFF_HEAP_MEMORY_ACCESS) {
+            try {
+                if (!ohDebug.isEmpty()) {
+                    for (Map.Entry<Long, AllocInfo> addrSize : ohDebug.entrySet()) {
+                        System.err.printf("  still allocated: address=%d, size=%d%n", addrSize.getKey(), addrSize.getValue().size);
+                        addrSize.getValue().trace.printStackTrace();
+                    }
+                    throw new RuntimeException("Not all allocated memory has been freed!");
+                }
+            } finally {
+                ohDebug.clear();
+                ohFreeDebug.clear();
+            }
+        }
+    }
+
+    private static void freed(long address) {
+        if (__DEBUG_OFF_HEAP_MEMORY_ACCESS) {
+            AllocInfo allocInfo = ohDebug.remove(address);
+            if (allocInfo == null) {
+                Throwable freedAt = ohFreeDebug.get(address);
+                throw new IllegalStateException("Free of unallocated region " + address, freedAt);
+            }
+            ohFreeDebug.put(address, new Exception("free backtrace - t=" + System.nanoTime()));
+        }
+    }
+
+    private static void allocated(long address, long bytes) {
+        if (__DEBUG_OFF_HEAP_MEMORY_ACCESS) {
+            AllocInfo allocatedLen =
+                    ohDebug.putIfAbsent(address, new AllocInfo(bytes, new Exception("Thread: " + Thread.currentThread())));
+            if (allocatedLen != null) {
+                throw new Error("Oops - allocate() got duplicate address");
+            }
+            ohFreeDebug.remove(address);
+        }
+    }
+
+    private static void validate(long address, long offset, long len) {
+        if (__DEBUG_OFF_HEAP_MEMORY_ACCESS) {
+            if (address == 0L) {
+                throw new NullPointerException();
+            }
+            AllocInfo allocInfo = ohDebug.get(address);
+            if (allocInfo == null) {
+                Throwable freedAt = ohFreeDebug.get(address);
+                throw new IllegalStateException("Access to unallocated region " + address + " - t=" + System.nanoTime(), freedAt);
+            }
+            if (offset < 0L) {
+                throw new IllegalArgumentException("Negative offset");
+            }
+            if (len < 0L) {
+                throw new IllegalArgumentException("Negative length");
+            }
+            if (offset + len > allocInfo.size) {
+                throw new IllegalArgumentException("Access outside allocated region");
+            }
+        }
     }
 
     static long getLongFromByteArray(byte[] array, int offset) {
@@ -344,28 +352,6 @@ final class Uns {
         allocator.free(address);
     }
 
-    private static final Class<?> DIRECT_BYTE_BUFFER_CLASS;
-    private static final Class<?> DIRECT_BYTE_BUFFER_CLASS_R;
-    private static final long DIRECT_BYTE_BUFFER_ADDRESS_OFFSET;
-    private static final long DIRECT_BYTE_BUFFER_CAPACITY_OFFSET;
-    private static final long DIRECT_BYTE_BUFFER_LIMIT_OFFSET;
-
-    static {
-        try {
-            ByteBuffer directBuffer = ByteBuffer.allocateDirect(0);
-            ByteBuffer directReadOnly = directBuffer.asReadOnlyBuffer();
-            Class<?> clazz = directBuffer.getClass();
-            Class<?> clazzReadOnly = directReadOnly.getClass();
-            DIRECT_BYTE_BUFFER_ADDRESS_OFFSET = unsafe.objectFieldOffset(Buffer.class.getDeclaredField("address"));
-            DIRECT_BYTE_BUFFER_CAPACITY_OFFSET = unsafe.objectFieldOffset(Buffer.class.getDeclaredField("capacity"));
-            DIRECT_BYTE_BUFFER_LIMIT_OFFSET = unsafe.objectFieldOffset(Buffer.class.getDeclaredField("limit"));
-            DIRECT_BYTE_BUFFER_CLASS = clazz;
-            DIRECT_BYTE_BUFFER_CLASS_R = clazzReadOnly;
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     static ByteBuffer directBufferFor(long address, long offset, long len, boolean readOnly) {
         if (len > Integer.MAX_VALUE || len < 0L) {
             throw new IllegalArgumentException();
@@ -397,5 +383,16 @@ final class Uns {
 
     static ByteBuffer buffer(long hashEntryAdr, long length, long offset) {
         return Uns.directBufferFor(hashEntryAdr + offset, 0, length, false);
+    }
+
+    private static final class AllocInfo {
+
+        final long size;
+        final Throwable trace;
+
+        AllocInfo(Long size, Throwable trace) {
+            this.size = size;
+            this.trace = trace;
+        }
     }
 }

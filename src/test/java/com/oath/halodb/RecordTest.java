@@ -41,7 +41,7 @@ public class RecordTest {
 
         ByteBuffer buffer = ByteBuffer.allocate(Record.Header.HEADER_SIZE);
         buffer.putInt(Utils.toSignedIntFromLong(checkSum));
-        buffer.put((byte)version);
+        buffer.put((byte) version);
         buffer.put(keySize);
         buffer.putInt(valueSize);
         buffer.putLong(sequenceNumber);
@@ -74,7 +74,7 @@ public class RecordTest {
         crc32.update(key);
         crc32.update(value);
 
-        Record.Header header = new Record.Header(0, version, (byte)key.length, value.length, sequenceNumber);
+        Record.Header header = new Record.Header(0, version, (byte) key.length, value.length, sequenceNumber);
         ByteBuffer headerBuf = header.serialize();
         headerBuf.putInt(Record.Header.CHECKSUM_OFFSET, Utils.toSignedIntFromLong(crc32.getValue()));
 

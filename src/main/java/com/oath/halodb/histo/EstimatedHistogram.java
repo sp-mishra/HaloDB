@@ -8,7 +8,6 @@
 package com.oath.halodb.histo;
 
 import com.google.common.base.Objects;
-
 import org.slf4j.Logger;
 
 import java.util.Arrays;
@@ -16,20 +15,19 @@ import java.util.concurrent.atomic.AtomicLongArray;
 
 public class EstimatedHistogram {
 
+    // buckets is one element longer than bucketOffsets -- the last element is values greater than the last offset
+    final AtomicLongArray buckets;
     /**
      * The series of values to which the counts in `buckets` correspond: 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 17, 20,
      * etc. Thus, a `buckets` of [0, 0, 1, 10] would mean we had seen one value of 3 and 10 values of 4.
-     *
+     * <p>
      * The series starts at 1 and grows by 1.2 each time (rounding and removing duplicates). It goes from 1 to around
      * 36M by default (creating 90+1 buckets), which will give us timing resolution from microseconds to 36 seconds,
      * with less precision as the numbers get larger.
-     *
+     * <p>
      * Each bucket represents values from (previous bucket offset, current offset].
      */
     private final long[] bucketOffsets;
-
-    // buckets is one element longer than bucketOffsets -- the last element is values greater than the last offset
-    final AtomicLongArray buckets;
 
     public EstimatedHistogram() {
         this(90);
@@ -60,6 +58,35 @@ public class EstimatedHistogram {
         }
 
         return result;
+    }
+
+    private static String nameOfRange(long[] bucketOffsets, int index) {
+        StringBuilder sb = new StringBuilder();
+        appendRange(sb, bucketOffsets, index);
+        return sb.toString();
+    }
+
+    private static void appendRange(StringBuilder sb, long[] bucketOffsets, int index) {
+        sb.append("[");
+        if (index == 0) {
+            if (bucketOffsets[0] > 0)
+            // by original definition, this histogram is for values greater than zero only;
+            // if values of 0 or less are required, an entry of lb-1 must be inserted at the start
+            {
+                sb.append("1");
+            } else {
+                sb.append("-Inf");
+            }
+        } else {
+            sb.append(bucketOffsets[index - 1] + 1);
+        }
+        sb.append("..");
+        if (index == bucketOffsets.length) {
+            sb.append("Inf");
+        } else {
+            sb.append(bucketOffsets[index]);
+        }
+        sb.append("]");
     }
 
     /**
@@ -272,35 +299,6 @@ public class EstimatedHistogram {
         return sb.toString();
     }
 
-    private static String nameOfRange(long[] bucketOffsets, int index) {
-        StringBuilder sb = new StringBuilder();
-        appendRange(sb, bucketOffsets, index);
-        return sb.toString();
-    }
-
-    private static void appendRange(StringBuilder sb, long[] bucketOffsets, int index) {
-        sb.append("[");
-        if (index == 0) {
-            if (bucketOffsets[0] > 0)
-            // by original definition, this histogram is for values greater than zero only;
-            // if values of 0 or less are required, an entry of lb-1 must be inserted at the start
-            {
-                sb.append("1");
-            } else {
-                sb.append("-Inf");
-            }
-        } else {
-            sb.append(bucketOffsets[index - 1] + 1);
-        }
-        sb.append("..");
-        if (index == bucketOffsets.length) {
-            sb.append("Inf");
-        } else {
-            sb.append(bucketOffsets[index]);
-        }
-        sb.append("]");
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -313,7 +311,7 @@ public class EstimatedHistogram {
 
         EstimatedHistogram that = (EstimatedHistogram) o;
         return Arrays.equals(getBucketOffsets(), that.getBucketOffsets()) &&
-               Arrays.equals(getBuckets(false), that.getBuckets(false));
+                Arrays.equals(getBuckets(false), that.getBuckets(false));
     }
 
     @Override

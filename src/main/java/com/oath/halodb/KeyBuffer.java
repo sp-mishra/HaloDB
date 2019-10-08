@@ -18,6 +18,14 @@ final class KeyBuffer {
         this.buffer = buffer;
     }
 
+    private static String pad(int val) {
+        String str = Integer.toHexString(val & 0xff);
+        while (str.length() == 1) {
+            str = '0' + str;
+        }
+        return str;
+    }
+
     long hash() {
         return hash;
     }
@@ -47,14 +55,6 @@ final class KeyBuffer {
 
     public int hashCode() {
         return (int) hash;
-    }
-
-    private static String pad(int val) {
-        String str = Integer.toHexString(val & 0xff);
-        while (str.length() == 1) {
-            str = '0' + str;
-        }
-        return str;
     }
 
     @Override

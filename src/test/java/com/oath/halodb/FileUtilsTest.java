@@ -28,27 +28,27 @@ public class FileUtilsTest {
     private Integer[] fileIds = {7, 12, 1, 8, 10};
 
     private List<String> indexFileNames =
-        Stream.of(fileIds)
-            .map(i -> Paths.get(directory).resolve(i + IndexFile.INDEX_FILE_NAME).toString())
-            .collect(Collectors.toList());
+            Stream.of(fileIds)
+                    .map(i -> Paths.get(directory).resolve(i + IndexFile.INDEX_FILE_NAME).toString())
+                    .collect(Collectors.toList());
 
 
     private List<String> dataFileNames =
-        Stream.of(fileIds)
-            .map(i -> Paths.get(directory).resolve(i + HaloDBFile.DATA_FILE_NAME).toString())
-            .collect(Collectors.toList());
+            Stream.of(fileIds)
+                    .map(i -> Paths.get(directory).resolve(i + HaloDBFile.DATA_FILE_NAME).toString())
+                    .collect(Collectors.toList());
 
 
     private List<String> dataFileNamesRepair =
-        Stream.of(fileIds)
-            .map(i -> Paths.get(directory).resolve(i + HaloDBFile.DATA_FILE_NAME + ".repair").toString())
-            .collect(Collectors.toList());
+            Stream.of(fileIds)
+                    .map(i -> Paths.get(directory).resolve(i + HaloDBFile.DATA_FILE_NAME + ".repair").toString())
+                    .collect(Collectors.toList());
 
 
     private List<String> tombstoneFileNames =
-        Stream.of(fileIds)
-            .map(i -> Paths.get(directory).resolve(i + TombstoneFile.TOMBSTONE_FILE_NAME).toString())
-            .collect(Collectors.toList());
+            Stream.of(fileIds)
+                    .map(i -> Paths.get(directory).resolve(i + TombstoneFile.TOMBSTONE_FILE_NAME).toString())
+                    .collect(Collectors.toList());
 
 
     @BeforeMethod
@@ -57,25 +57,25 @@ public class FileUtilsTest {
         FileUtils.createDirectoryIfNotExists(new File(directory));
 
         for (String f : indexFileNames) {
-            try(PrintWriter writer = new PrintWriter(new FileWriter(f))) {
+            try (PrintWriter writer = new PrintWriter(new FileWriter(f))) {
                 writer.append("test");
             }
         }
 
         for (String f : dataFileNames) {
-            try(PrintWriter writer = new PrintWriter(new FileWriter(f))) {
+            try (PrintWriter writer = new PrintWriter(new FileWriter(f))) {
                 writer.append("test");
             }
         }
 
         for (String f : dataFileNamesRepair) {
-            try(PrintWriter writer = new PrintWriter(new FileWriter(f))) {
+            try (PrintWriter writer = new PrintWriter(new FileWriter(f))) {
                 writer.append("test");
             }
         }
 
         for (String f : tombstoneFileNames) {
-            try(PrintWriter writer = new PrintWriter(new FileWriter(f))) {
+            try (PrintWriter writer = new PrintWriter(new FileWriter(f))) {
                 writer.append("test");
             }
         }

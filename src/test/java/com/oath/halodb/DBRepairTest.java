@@ -28,7 +28,7 @@ public class DBRepairTest extends TestBase {
         HaloDB db = getTestDB(directory, options);
         int noOfRecords = 5 * 1024 + 512; // 5 files with 1024 records and 1 with 512 records. 
 
-        List<Record> records = TestUtils.insertRandomRecordsOfSize(db, noOfRecords, 1024-Record.Header.HEADER_SIZE);
+        List<Record> records = TestUtils.insertRandomRecordsOfSize(db, noOfRecords, 1024 - Record.Header.HEADER_SIZE);
 
         // delete half the records.
         for (int i = 0; i < noOfRecords; i++) {
@@ -38,9 +38,9 @@ public class DBRepairTest extends TestBase {
         }
 
         FileTime latestDataFileCreatedTime =
-            TestUtils.getFileCreationTime(TestUtils.getLatestDataFile(directory).get());
+                TestUtils.getFileCreationTime(TestUtils.getLatestDataFile(directory).get());
         FileTime latestTombstoneFileCreationTime =
-            TestUtils.getFileCreationTime(FileUtils.listTombstoneFiles(new File(directory))[0]);
+                TestUtils.getFileCreationTime(FileUtils.listTombstoneFiles(new File(directory))[0]);
 
         db.close();
 
@@ -59,20 +59,19 @@ public class DBRepairTest extends TestBase {
 
         // latest file should have been repaired and replaced.
         Assert.assertNotEquals(
-            TestUtils.getFileCreationTime(TestUtils.getLatestDataFile(directory).get()),
-            latestDataFileCreatedTime
+                TestUtils.getFileCreationTime(TestUtils.getLatestDataFile(directory).get()),
+                latestDataFileCreatedTime
         );
         Assert.assertNotEquals(
-            TestUtils.getFileCreationTime(FileUtils.listTombstoneFiles(new File(directory))[0]),
-            latestTombstoneFileCreationTime
+                TestUtils.getFileCreationTime(FileUtils.listTombstoneFiles(new File(directory))[0]),
+                latestTombstoneFileCreationTime
         );
 
-        Assert.assertEquals(db.size(), noOfRecords/2);
+        Assert.assertEquals(db.size(), noOfRecords / 2);
         for (int i = 0; i < noOfRecords; i++) {
             if (i % 2 == 0) {
                 Assert.assertNull(db.get(records.get(i).getKey()));
-            }
-            else {
+            } else {
                 Record r = records.get(i);
                 Assert.assertEquals(db.get(r.getKey()), r.getValue());
             }
@@ -88,8 +87,8 @@ public class DBRepairTest extends TestBase {
         HaloDB db = getTestDB(directory, options);
         int noOfRecords = 10 * 1024 + 512;
 
-        List<Record> records = TestUtils.insertRandomRecordsOfSize(db, noOfRecords, 1024-Record.Header.HEADER_SIZE);
-        List<Record> toUpdate = IntStream.range(0, noOfRecords).filter(i -> i%2==0).mapToObj(i -> records.get(i)).collect(Collectors.toList());
+        List<Record> records = TestUtils.insertRandomRecordsOfSize(db, noOfRecords, 1024 - Record.Header.HEADER_SIZE);
+        List<Record> toUpdate = IntStream.range(0, noOfRecords).filter(i -> i % 2 == 0).mapToObj(i -> records.get(i)).collect(Collectors.toList());
         List<Record> updatedRecords = TestUtils.updateRecords(db, toUpdate);
         for (int i = 0; i < updatedRecords.size(); i++) {
             records.set(i * 2, updatedRecords.get(i));
@@ -98,7 +97,7 @@ public class DBRepairTest extends TestBase {
         TestUtils.waitForCompactionToComplete(db);
 
         FileTime latestDataFileCreatedTime =
-            TestUtils.getFileCreationTime(TestUtils.getLatestDataFile(directory).get());
+                TestUtils.getFileCreationTime(TestUtils.getLatestDataFile(directory).get());
 
         db.close();
 
@@ -117,8 +116,8 @@ public class DBRepairTest extends TestBase {
 
         // latest file should have been repaired and replaced.
         Assert.assertNotEquals(
-            TestUtils.getFileCreationTime(TestUtils.getLatestDataFile(directory).get()),
-            latestDataFileCreatedTime
+                TestUtils.getFileCreationTime(TestUtils.getLatestDataFile(directory).get()),
+                latestDataFileCreatedTime
         );
 
         Assert.assertEquals(db.size(), noOfRecords);
@@ -158,9 +157,9 @@ public class DBRepairTest extends TestBase {
         File[] tombstoneFiles = FileUtils.listTombstoneFiles(new File(directory));
 
         FileTime latestDataFileCreatedTime =
-            TestUtils.getFileCreationTime(TestUtils.getLatestDataFile(directory).get());
+                TestUtils.getFileCreationTime(TestUtils.getLatestDataFile(directory).get());
         FileTime latestTombstoneFileCreationTime =
-            TestUtils.getFileCreationTime(tombstoneFiles[tombstoneFiles.length-1]);
+                TestUtils.getFileCreationTime(tombstoneFiles[tombstoneFiles.length - 1]);
 
         db.close();
 
@@ -178,12 +177,12 @@ public class DBRepairTest extends TestBase {
 
         // latest file should have been repaired and replaced.
         Assert.assertNotEquals(
-            TestUtils.getFileCreationTime(TestUtils.getLatestDataFile(directory).get()),
-            latestDataFileCreatedTime
+                TestUtils.getFileCreationTime(TestUtils.getLatestDataFile(directory).get()),
+                latestDataFileCreatedTime
         );
         Assert.assertNotEquals(
-            TestUtils.getFileCreationTime(tombstoneFiles[tombstoneFiles.length-1]),
-            latestTombstoneFileCreationTime
+                TestUtils.getFileCreationTime(tombstoneFiles[tombstoneFiles.length - 1]),
+                latestTombstoneFileCreationTime
         );
 
 

@@ -9,7 +9,6 @@ package com.oath.halodb;
 
 import com.google.common.primitives.Ints;
 import com.oath.halodb.histo.EstimatedHistogram;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,25 +18,19 @@ class SegmentNonMemoryPool<V> extends Segment<V> {
 
     // maximum hash table size
     private static final int MAX_TABLE_SIZE = 1 << 30;
-
+    private static final boolean throwOOME = true;
+    private final float loadFactor;
+    private final HashAlgorithm hashAlgorithm;
     long size;
     Table table;
-
+    long evictedEntries;
     private long hitCount;
     private long missCount;
     private long putAddCount;
     private long putReplaceCount;
     private long removeCount;
-
     private long threshold;
-    private final float loadFactor;
-
     private long rehashes;
-    long evictedEntries;
-
-    private final HashAlgorithm hashAlgorithm;
-
-    private static final boolean throwOOME = true;
 
     SegmentNonMemoryPool(OffHeapHashTableBuilder<V> builder) {
         super(builder.getValueSerializer(), builder.getFixedValueSize(), builder.getHasher());
@@ -63,6 +56,12 @@ class SegmentNonMemoryPool<V> extends Segment<V> {
         }
         this.loadFactor = lf;
         threshold = (long) ((double) table.size() * loadFactor);
+    }
+
+    private static boolean notSameKey(long newHashEntryAdr, long newHash, long newKeyLen, long hashEntryAdr) {
+        long serKeyLen = NonMemoryPoolHashEntries.getKeyLen(hashEntryAdr);
+        return serKeyLen != newKeyLen
+                || !Uns.memoryCompare(hashEntryAdr, NonMemoryPoolHashEntries.ENTRY_OFF_DATA, newHashEntryAdr, NonMemoryPoolHashEntries.ENTRY_OFF_DATA, serKeyLen);
     }
 
     @Override
@@ -262,12 +261,6 @@ class SegmentNonMemoryPool<V> extends Segment<V> {
         }
     }
 
-    private static boolean notSameKey(long newHashEntryAdr, long newHash, long newKeyLen, long hashEntryAdr) {
-        long serKeyLen = NonMemoryPoolHashEntries.getKeyLen(hashEntryAdr);
-        return serKeyLen != newKeyLen
-               || !Uns.memoryCompare(hashEntryAdr, NonMemoryPoolHashEntries.ENTRY_OFF_DATA, newHashEntryAdr, NonMemoryPoolHashEntries.ENTRY_OFF_DATA, serKeyLen);
-    }
-
     private void serializeForPut(byte[] key, V value, long hashEntryAdr) {
         try {
             Uns.buffer(hashEntryAdr, key.length, NonMemoryPoolHashEntries.ENTRY_OFF_DATA).put(key);
@@ -413,22 +406,35 @@ class SegmentNonMemoryPool<V> extends Segment<V> {
         }
     }
 
+    private void removeInternal(long hashEntryAdr, long prevEntryAdr, long hash) {
+        table.removeLink(hash, hashEntryAdr, prevEntryAdr);
+    }
+
+    private void add(long hashEntryAdr, long hash) {
+        table.addAsHead(hash, hashEntryAdr);
+    }
+
+    @Override
+    public String toString() {
+        return String.valueOf(size);
+    }
+
     static final class Table {
 
         final int mask;
         final long address;
         private boolean released;
 
-        static Table create(int hashTableSize, boolean throwOOME) {
-            int msz = Ints.checkedCast(HashTableUtil.NON_MEMORY_POOL_BUCKET_ENTRY_LEN * hashTableSize);
-            long address = Uns.allocate(msz, throwOOME);
-            return address != 0L ? new Table(address, hashTableSize) : null;
-        }
-
         private Table(long address, int hashTableSize) {
             this.address = address;
             this.mask = hashTableSize - 1;
             clear();
+        }
+
+        static Table create(int hashTableSize, boolean throwOOME) {
+            int msz = Ints.checkedCast(HashTableUtil.NON_MEMORY_POOL_BUCKET_ENTRY_LEN * hashTableSize);
+            long address = Uns.allocate(msz, throwOOME);
+            return address != 0L ? new Table(address, hashTableSize) : null;
         }
 
         void clear() {
@@ -514,18 +520,5 @@ class SegmentNonMemoryPool<V> extends Segment<V> {
                 h.add(len + 1);
             }
         }
-    }
-
-    private void removeInternal(long hashEntryAdr, long prevEntryAdr, long hash) {
-        table.removeLink(hash, hashEntryAdr, prevEntryAdr);
-    }
-
-    private void add(long hashEntryAdr, long hash) {
-        table.addAsHead(hash, hashEntryAdr);
-    }
-
-    @Override
-    public String toString() {
-        return String.valueOf(size);
     }
 }

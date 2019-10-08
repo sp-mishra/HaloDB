@@ -17,7 +17,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  * Holds an instance of HaloDB and Java's ConcurrentHashMap.
  * Tests will use this to insert data into both and ensure that
- * the data in HaloDB is correct. 
+ * the data in HaloDB is correct.
  */
 
 class DataConsistencyDB {
@@ -26,10 +26,8 @@ class DataConsistencyDB {
     //TODO: allocate this off-heap.
     private final Map<ByteBuffer, byte[]> javaMap = new ConcurrentHashMap<>();
     private final HaloDB haloDB;
-
-    private int numberOfLocks = 100;
-
     private final ReentrantReadWriteLock[] locks;
+    private int numberOfLocks = 100;
 
     DataConsistencyDB(HaloDB haloDB, int noOfRecords) {
         this.haloDB = haloDB;
@@ -41,25 +39,23 @@ class DataConsistencyDB {
     }
 
     void put(int keyIndex, ByteBuffer keyBuf, byte[] value) throws HaloDBException {
-        ReentrantReadWriteLock lock = locks[keyIndex%numberOfLocks];
+        ReentrantReadWriteLock lock = locks[keyIndex % numberOfLocks];
         try {
             lock.writeLock().lock();
             javaMap.put(keyBuf, value);
             haloDB.put(keyBuf.array(), value);
-        }
-        finally {
+        } finally {
             lock.writeLock().unlock();
         }
     }
 
     // return -1 if values don't match.
     int compareValues(int keyIndex, ByteBuffer keyBuf) throws HaloDBException {
-        ReentrantReadWriteLock lock = locks[keyIndex%numberOfLocks];
+        ReentrantReadWriteLock lock = locks[keyIndex % numberOfLocks];
         try {
             lock.readLock().lock();
             return checkValues(keyIndex, keyBuf, haloDB);
-        }
-        finally {
+        } finally {
             lock.readLock().unlock();
         }
     }
@@ -69,13 +65,12 @@ class DataConsistencyDB {
     }
 
     void delete(int keyIndex, ByteBuffer keyBuf) throws HaloDBException {
-        ReentrantReadWriteLock lock = locks[keyIndex%numberOfLocks];
+        ReentrantReadWriteLock lock = locks[keyIndex % numberOfLocks];
         try {
             lock.writeLock().lock();
             javaMap.remove(keyBuf);
             haloDB.delete(keyBuf.array());
-        }
-        finally {
+        } finally {
             lock.writeLock().unlock();
         }
     }
@@ -109,16 +104,14 @@ class DataConsistencyDB {
 
         if (mapValue == null) {
             logger.error("Map value is null for key {} of length {} but HaloDB value has version {}",
-                         key, keyBuf.remaining(), DataConsistencyTest.getVersionFromValue(dbValue));
-        }
-        else if (dbValue == null) {
+                    key, keyBuf.remaining(), DataConsistencyTest.getVersionFromValue(dbValue));
+        } else if (dbValue == null) {
             logger.error("HaloDB value is null for key {} of length {} but Map value has version {}",
-                         key, keyBuf.remaining(), DataConsistencyTest.getVersionFromValue(mapValue));
-        }
-        else {
+                    key, keyBuf.remaining(), DataConsistencyTest.getVersionFromValue(mapValue));
+        } else {
             logger.error("HaloDB value for key {} has version {} of length {} but map value version is {}",
-                         key, keyBuf.remaining(), DataConsistencyTest.getVersionFromValue(dbValue), DataConsistencyTest
-                             .getVersionFromValue(mapValue));
+                    key, keyBuf.remaining(), DataConsistencyTest.getVersionFromValue(dbValue), DataConsistencyTest
+                            .getVersionFromValue(mapValue));
         }
 
         return -1;

@@ -8,7 +8,6 @@
 package com.oath.halodb;
 
 import com.google.common.primitives.Longs;
-
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 
@@ -17,31 +16,26 @@ import java.io.IOException;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-public class RehashTest
-{
+public class RehashTest {
     @AfterMethod(alwaysRun = true)
-    public void deinit()
-    {
+    public void deinit() {
         Uns.clearUnsDebugForTest();
     }
 
     @Test
-    public void testRehash() throws IOException
-    {
+    public void testRehash() throws IOException {
         try (OffHeapHashTable<byte[]> cache = OffHeapHashTableBuilder.<byte[]>newBuilder()
-                                                            .valueSerializer(HashTableTestUtils.byteArraySerializer)
-                                                            .hashTableSize(64)
-                                                            .segmentCount(4)
-                                                            .fixedValueSize(8)
-                                                            .build())
-        {
+                .valueSerializer(HashTableTestUtils.byteArraySerializer)
+                .hashTableSize(64)
+                .segmentCount(4)
+                .fixedValueSize(8)
+                .build()) {
             for (int i = 0; i < 100000; i++)
                 cache.put(Longs.toByteArray(i), Longs.toByteArray(i));
 
             assertTrue(cache.stats().getRehashCount() > 0);
 
-            for (int i = 0; i < 100000; i++)
-            {
+            for (int i = 0; i < 100000; i++) {
                 byte[] v = cache.get(Longs.toByteArray(i));
                 assertEquals(Longs.fromByteArray(v), i);
             }

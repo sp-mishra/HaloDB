@@ -37,9 +37,9 @@ class FileUtils {
 
         // sort in ascending order. we want the earliest index files to be processed first.
         return Arrays.stream(files)
-            .sorted(Comparator.comparingInt(f -> getFileId(f, Constants.INDEX_FILE_PATTERN)))
-            .map(f -> getFileId(f, Constants.INDEX_FILE_PATTERN))
-            .collect(Collectors.toList());
+                .sorted(Comparator.comparingInt(f -> getFileId(f, Constants.INDEX_FILE_PATTERN)))
+                .map(f -> getFileId(f, Constants.INDEX_FILE_PATTERN))
+                .collect(Collectors.toList());
     }
 
     /**

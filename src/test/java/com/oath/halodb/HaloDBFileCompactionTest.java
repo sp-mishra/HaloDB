@@ -6,7 +6,6 @@
 package com.oath.halodb;
 
 import com.google.common.primitives.Longs;
-
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.testng.annotations.Test;
@@ -33,7 +32,7 @@ public class HaloDBFileCompactionTest extends TestBase {
 
         byte[] data = new byte[recordSize - Record.Header.HEADER_SIZE - 8 - 8];
         for (int i = 0; i < data.length; i++) {
-            data[i] = (byte)i;
+            data[i] = (byte) i;
         }
 
         Record[] records = new Record[recordNumber];
@@ -49,7 +48,7 @@ public class HaloDBFileCompactionTest extends TestBase {
         // There are two data files. make the first half of both the files stale. 
         for (int i = 0; i < 5; i++) {
             db.put(records[i].getKey(), records[i].getValue());
-            db.put(records[i+10].getKey(), records[i+10].getValue());
+            db.put(records[i + 10].getKey(), records[i + 10].getValue());
         }
 
         // Second half of both the files should be copied to the compacted file.

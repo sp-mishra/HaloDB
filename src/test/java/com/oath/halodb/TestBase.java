@@ -13,9 +13,8 @@ import java.io.IOException;
 
 public class TestBase {
 
-    private String directory;
     protected DBDirectory dbDirectory;
-
+    private String directory;
     private HaloDB db;
 
     @DataProvider(name = "Options")
@@ -27,9 +26,9 @@ public class TestBase {
         withMemoryPool.setMemoryPoolChunkSize(1024 * 1024);
         withMemoryPool.setBuildIndexThreads(2);
 
-        return new Object[][] {
-            {options},
-            {withMemoryPool}
+        return new Object[][]{
+                {options},
+                {withMemoryPool}
         };
     }
 

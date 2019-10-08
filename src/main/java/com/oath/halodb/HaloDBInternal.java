@@ -7,7 +7,6 @@ package com.oath.halodb;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.Ints;
-
 import com.google.common.util.concurrent.RateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,14 +19,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -36,42 +28,28 @@ import java.util.concurrent.locks.ReentrantLock;
 
 class HaloDBInternal {
     private static final Logger logger = LoggerFactory.getLogger(HaloDBInternal.class);
-
-    private DBDirectory dbDirectory;
-
-    private volatile HaloDBFile currentWriteFile;
-
-    private TombstoneFile currentTombstoneFile;
-
-    private Map<Integer, HaloDBFile> readFileMap = new ConcurrentHashMap<>();
-
-    HaloDBOptions options;
-
-    private InMemoryIndex inMemoryIndex;
-
-    private final Map<Integer, Integer> staleDataPerFileMap = new ConcurrentHashMap<>();
-
-    private CompactionManager compactionManager;
-
-    private AtomicInteger nextFileId;
-
-    private volatile boolean isClosing = false;
-
-    private volatile long statsResetTime = System.currentTimeMillis();
-
-    private FileLock dbLock;
-
-    private final Lock writeLock = new ReentrantLock();
-
     private static final int maxReadAttempts = 5;
-
+    private final Map<Integer, Integer> staleDataPerFileMap = new ConcurrentHashMap<>();
+    private final Lock writeLock = new ReentrantLock();
+    HaloDBOptions options;
+    private DBDirectory dbDirectory;
+    private volatile HaloDBFile currentWriteFile;
+    private TombstoneFile currentTombstoneFile;
+    private Map<Integer, HaloDBFile> readFileMap = new ConcurrentHashMap<>();
+    private InMemoryIndex inMemoryIndex;
+    private CompactionManager compactionManager;
+    private AtomicInteger nextFileId;
+    private volatile boolean isClosing = false;
+    private volatile long statsResetTime = System.currentTimeMillis();
+    private FileLock dbLock;
     private AtomicLong noOfTombstonesCopiedDuringOpen;
     private AtomicLong noOfTombstonesFoundDuringOpen;
     private volatile long nextSequenceNumber;
 
     private volatile boolean isTombstoneFilesMerging = false;
 
-    private HaloDBInternal() {}
+    private HaloDBInternal() {
+    }
 
     static HaloDBInternal open(File directory, HaloDBOptions options) throws HaloDBException, IOException {
         checkIfOptionsAreCorrect(options);
@@ -108,8 +86,8 @@ class HaloDBInternal {
             dbInternal.compactionManager = new CompactionManager(dbInternal);
 
             dbInternal.inMemoryIndex = new InMemoryIndex(
-                options.getNumberOfRecords(), options.isUseMemoryPool(),
-                options.getFixedKeySize(), options.getMemoryPoolChunkSize()
+                    options.getNumberOfRecords(), options.isUseMemoryPool(),
+                    options.getFixedKeySize(), options.getMemoryPoolChunkSize()
             );
 
             long maxSequenceNumber = dbInternal.buildInMemoryIndex(options);
@@ -123,15 +101,16 @@ class HaloDBInternal {
 
             if (!options.isCompactionDisabled()) {
                 dbInternal.compactionManager.startCompactionThread();
-            }
-            else {
+            } else {
                 logger.warn("Compaction is disabled in HaloDBOption. This should happen only in tests");
             }
 
             // merge tombstone files at background if clean up set to true
             if (options.isCleanUpTombstonesDuringOpen()) {
                 dbInternal.isTombstoneFilesMerging = true;
-                Thread t = new Thread(() -> { dbInternal.mergeTombstoneFiles(); });
+                Thread t = new Thread(() -> {
+                    dbInternal.mergeTombstoneFiles();
+                });
                 t.start();
             }
 
@@ -149,6 +128,12 @@ class HaloDBInternal {
         return dbInternal;
     }
 
+    private static void checkIfOptionsAreCorrect(HaloDBOptions options) {
+        if (options.isUseMemoryPool() && (options.getFixedKeySize() < 0 || options.getFixedKeySize() > Byte.MAX_VALUE)) {
+            throw new IllegalArgumentException("fixedKeySize must be set and should be less than 128 when using memory pool");
+        }
+    }
+
     void close() throws IOException {
         writeLock.lock();
         try {
@@ -159,7 +144,7 @@ class HaloDBInternal {
             isClosing = true;
 
             try {
-                if(!compactionManager.stopCompactionThread(true))
+                if (!compactionManager.stopCompactionThread(true))
                     setIOErrorFlag();
             } catch (IOException e) {
                 logger.error("Error while stopping compaction thread. Setting IOError flag", e);
@@ -203,7 +188,7 @@ class HaloDBInternal {
             throw new HaloDBException("key length cannot exceed " + Byte.MAX_VALUE);
         }
 
-        //TODO: more fine-grained locking is possible. 
+        //TODO: more fine-grained locking is possible.
         writeLock.lock();
         try {
             Record record = new Record(key, value);
@@ -222,7 +207,7 @@ class HaloDBInternal {
 
     byte[] get(byte[] key, int attemptNumber) throws IOException, HaloDBException {
         if (attemptNumber > maxReadAttempts) {
-            logger.error("Tried {} attempts but read failed", attemptNumber-1);
+            logger.error("Tried {} attempts but read failed", attemptNumber - 1);
             throw new HaloDBException("Tried " + attemptNumber + " attempts but failed.");
         }
         InMemoryIndexMetaData metaData = inMemoryIndex.get(key);
@@ -233,19 +218,18 @@ class HaloDBInternal {
         HaloDBFile readFile = readFileMap.get(metaData.getFileId());
         if (readFile == null) {
             logger.debug("File {} not present. Compaction job would have deleted it. Retrying ...", metaData.getFileId());
-            return get(key, attemptNumber+1);
+            return get(key, attemptNumber + 1);
         }
 
         try {
             return readFile.readFromFile(metaData.getValueOffset(), metaData.getValueSize());
-        }
-        catch (ClosedChannelException e) {
+        } catch (ClosedChannelException e) {
             if (!isClosing) {
                 logger.debug("File {} was closed. Compaction job would have deleted it. Retrying ...", metaData.getFileId());
-                return get(key, attemptNumber+1);
+                return get(key, attemptNumber + 1);
             }
 
-            // trying to read after HaloDB.close() method called. 
+            // trying to read after HaloDB.close() method called.
             throw e;
         }
     }
@@ -269,8 +253,7 @@ class HaloDBInternal {
             int read = readFile.readFromFile(metaData.getValueOffset(), buffer);
             buffer.flip();
             return read;
-        }
-        catch (ClosedChannelException e) {
+        } catch (ClosedChannelException e) {
             if (!isClosing) {
                 logger.debug("File {} was closed. Compaction job would have deleted it. Retrying ...", metaData.getFileId());
                 return get(key, buffer);
@@ -289,7 +272,7 @@ class HaloDBInternal {
                 //TODO: implement a getAndRemove method in InMemoryIndex.
                 inMemoryIndex.remove(key);
                 TombstoneEntry entry =
-                    new TombstoneEntry(key, getNextSequenceNumber(), -1, Versions.CURRENT_TOMBSTONE_FILE_VERSION);
+                        new TombstoneEntry(key, getNextSequenceNumber(), -1, Versions.CURRENT_TOMBSTONE_FILE_VERSION);
                 currentTombstoneFile = rollOverTombstoneFile(entry, currentTombstoneFile);
                 currentTombstoneFile.write(entry);
                 markPreviousVersionAsStale(key, metaData);
@@ -326,7 +309,7 @@ class HaloDBInternal {
     private void rollOverCurrentWriteFile(Record record) throws IOException, HaloDBException {
         int size = record.getKey().length + record.getValue().length + Record.Header.HEADER_SIZE;
 
-        if ((currentWriteFile == null ||  currentWriteFile.getWriteOffset() + size > options.getMaxFileSize()) && !isClosing) {
+        if ((currentWriteFile == null || currentWriteFile.getWriteOffset() + size > options.getMaxFileSize()) && !isClosing) {
             if (currentWriteFile != null) {
                 currentWriteFile.flushToDisk();
                 currentWriteFile.getIndexFile().flushToDisk();
@@ -340,7 +323,7 @@ class HaloDBInternal {
         int size = entry.getKey().length + TombstoneEntry.TOMBSTONE_ENTRY_HEADER_SIZE;
 
         if ((tombstoneFile == null ||
-            tombstoneFile.getWriteOffset() + size > options.getMaxTombstoneFileSize()) && !isClosing) {
+                tombstoneFile.getWriteOffset() + size > options.getMaxTombstoneFileSize()) && !isClosing) {
             if (tombstoneFile != null) {
                 tombstoneFile.flushToDisk();
                 tombstoneFile.close();
@@ -373,7 +356,7 @@ class HaloDBInternal {
 
             // We don't want to compact the files the writer thread and the compaction thread is currently writing to.
             if (getCurrentWriteFileId() != fileId && compactionManager.getCurrentWriteFileId() != fileId) {
-                if(compactionManager.submitFileForCompaction(fileId)) {
+                if (compactionManager.submitFileForCompaction(fileId)) {
                     staleDataPerFileMap.remove(fileId);
                 }
             }
@@ -394,7 +377,7 @@ class HaloDBInternal {
 
     HaloDBFile createHaloDBFile(HaloDBFile.FileType fileType) throws IOException {
         HaloDBFile file = HaloDBFile.create(dbDirectory, getNextFileId(), options, fileType);
-        if(readFileMap.putIfAbsent(file.getFileId(), file) != null) {
+        if (readFileMap.putIfAbsent(file.getFileId(), file) != null) {
             throw new IOException("Error while trying to create file " + file.getName() + " file with the given id already exists in the map");
         }
         return file;
@@ -441,9 +424,9 @@ class HaloDBInternal {
 
     private Optional<HaloDBFile> getLatestDataFile(HaloDBFile.FileType fileType) {
         return readFileMap.values()
-            .stream()
-            .filter(f -> f.getFileType() == fileType)
-            .max(Comparator.comparingInt(HaloDBFile::getFileId));
+                .stream()
+                .filter(f -> f.getFileType() == fileType)
+                .max(Comparator.comparingInt(HaloDBFile::getFileId));
     }
 
     private long buildInMemoryIndex(HaloDBOptions options) throws IOException {
@@ -500,6 +483,217 @@ class HaloDBInternal {
         logger.info("Completed scanning all tombstone files in {}s", (System.currentTimeMillis() - start) / 1000);
 
         return maxSequenceNumber;
+    }
+
+    HaloDBFile getHaloDBFile(int fileId) {
+        return readFileMap.get(fileId);
+    }
+
+    void deleteHaloDBFile(int fileId) throws IOException {
+        HaloDBFile file = readFileMap.get(fileId);
+
+        if (file != null) {
+            readFileMap.remove(fileId);
+            file.delete();
+        }
+
+        staleDataPerFileMap.remove(fileId);
+    }
+
+    /**
+     * If options.isCleanUpTombstonesDuringOpen set to true, all inactive entries,
+     * i.e. physically deleted records, will be dropped during db open.
+     * Refer to ProcessTombstoneFileTask class and buildInMemoryIndex()
+     * To shorten db open time, active entries, i.e. not physically deleted
+     * records, in each tombstone file are rolled over to a corresponding
+     * new tombstone file. Therefore, the new tombstone file size might be very
+     * small depends on number of active entries in each tombstone file.
+     * A tombstone file won't be deleted as long as it has at least 1 active
+     * entry. This function provide a way to merge small tombstone files in
+     * offline mode. options.maxTombstoneFileSize still apply to merged file
+     */
+    private void mergeTombstoneFiles() {
+        File[] tombStoneFiles = dbDirectory.listTombstoneFiles();
+
+        logger.info("About to merge {} tombstone files ...", tombStoneFiles.length);
+        TombstoneFile mergedTombstoneFile = null;
+
+        // Use compaction job rate as write rate limiter to avoid IO impact
+        final RateLimiter rateLimiter = RateLimiter.create(options.getCompactionJobRate());
+
+        for (File file : tombStoneFiles) {
+            TombstoneFile tombstoneFile = new TombstoneFile(file, options, dbDirectory);
+            if (currentTombstoneFile != null && tombstoneFile.getName().equals(currentTombstoneFile.getName())) {
+                continue; // not touch current tombstone file
+            }
+
+            try {
+                tombstoneFile.open();
+                TombstoneFile.TombstoneFileIterator iterator = tombstoneFile.newIterator();
+
+                long count = 0;
+                while (iterator.hasNext()) {
+                    TombstoneEntry entry = iterator.next();
+                    rateLimiter.acquire(entry.size());
+                    count++;
+                    mergedTombstoneFile = rollOverTombstoneFile(entry, mergedTombstoneFile);
+                    mergedTombstoneFile.write(entry);
+                }
+                if (count > 0) {
+                    logger.debug("Merged {} tombstones from {} to {}",
+                            count, tombstoneFile.getName(), mergedTombstoneFile.getName());
+                }
+                tombstoneFile.close();
+                tombstoneFile.delete();
+            } catch (IOException e) {
+                logger.error("IO exception when merging tombstone file", e);
+            }
+        }
+
+        logger.info("Tombstone files count, before merge:{}, after merge:{}",
+                tombStoneFiles.length, dbDirectory.listTombstoneFiles().length);
+        isTombstoneFilesMerging = false;
+    }
+
+    private void repairFiles() {
+        getLatestDataFile(HaloDBFile.FileType.DATA_FILE).ifPresent(file -> {
+            try {
+                logger.info("Repairing file {}.data", file.getFileId());
+                HaloDBFile repairedFile = file.repairFile(dbDirectory);
+                readFileMap.put(repairedFile.getFileId(), repairedFile);
+            } catch (IOException e) {
+                throw new RuntimeException("Exception while repairing data file " + file.getFileId() + " which might be corrupted", e);
+            }
+        });
+        getLatestDataFile(HaloDBFile.FileType.COMPACTED_FILE).ifPresent(file -> {
+            try {
+                logger.info("Repairing file {}.datac", file.getFileId());
+                HaloDBFile repairedFile = file.repairFile(dbDirectory);
+                readFileMap.put(repairedFile.getFileId(), repairedFile);
+            } catch (IOException e) {
+                throw new RuntimeException("Exception while repairing datac file " + file.getFileId() + " which might be corrupted", e);
+            }
+        });
+
+        File[] tombstoneFiles = dbDirectory.listTombstoneFiles();
+        if (tombstoneFiles != null && tombstoneFiles.length > 0) {
+            TombstoneFile lastFile = new TombstoneFile(tombstoneFiles[tombstoneFiles.length - 1], options, dbDirectory);
+            try {
+                logger.info("Repairing {} file", lastFile.getName());
+                lastFile.open();
+                TombstoneFile repairedFile = lastFile.repairFile(dbDirectory);
+                repairedFile.close();
+            } catch (IOException e) {
+                throw new RuntimeException("Exception while repairing tombstone file " + lastFile.getName() + " which might be corrupted", e);
+            }
+        }
+    }
+
+    private FileLock getLock() throws HaloDBException {
+        try {
+            FileLock lock = FileChannel.open(dbDirectory.getPath().resolve("LOCK"), StandardOpenOption.CREATE, StandardOpenOption.WRITE).tryLock();
+            if (lock == null) {
+                logger.error("Error while opening db. Another process already holds a lock to this db.");
+                throw new HaloDBException("Another process already holds a lock for this db.");
+            }
+
+            return lock;
+        } catch (OverlappingFileLockException e) {
+            logger.error("Error while opening db. Another process already holds a lock to this db.");
+            throw new HaloDBException("Another process already holds a lock for this db.");
+        } catch (IOException e) {
+            logger.error("Error while trying to get a lock on the db.", e);
+            throw new HaloDBException("Error while trying to get a lock on the db.", e);
+        }
+    }
+
+    DBDirectory getDbDirectory() {
+        return dbDirectory;
+    }
+
+    Set<Integer> listDataFileIds() {
+        return new HashSet<>(readFileMap.keySet());
+    }
+
+    boolean isRecordFresh(byte[] key, InMemoryIndexMetaData metaData) {
+        InMemoryIndexMetaData currentMeta = inMemoryIndex.get(key);
+
+        return
+                currentMeta != null
+                        &&
+                        metaData.getFileId() == currentMeta.getFileId()
+                        &&
+                        metaData.getValueOffset() == currentMeta.getValueOffset();
+    }
+
+    private long getNextSequenceNumber() {
+        return nextSequenceNumber++;
+    }
+
+    private int getCurrentWriteFileId() {
+        return currentWriteFile != null ? currentWriteFile.getFileId() : -1;
+    }
+
+    boolean isClosing() {
+        return isClosing;
+    }
+
+    HaloDBStats stats() {
+        OffHeapHashTableStats stats = inMemoryIndex.stats();
+        return new HaloDBStats(
+                statsResetTime,
+                stats.getSize(),
+                compactionManager.isCompactionRunning(),
+                compactionManager.noOfFilesPendingCompaction(),
+                computeStaleDataMapForStats(),
+                stats.getRehashCount(),
+                inMemoryIndex.getNoOfSegments(),
+                inMemoryIndex.getMaxSizeOfEachSegment(),
+                stats.getSegmentStats(),
+                dbDirectory.listDataFiles().length,
+                dbDirectory.listTombstoneFiles().length,
+                noOfTombstonesFoundDuringOpen.get(),
+                options.isCleanUpTombstonesDuringOpen() ?
+                        noOfTombstonesFoundDuringOpen.get() - noOfTombstonesCopiedDuringOpen.get() : 0,
+                compactionManager.getNumberOfRecordsCopied(),
+                compactionManager.getNumberOfRecordsReplaced(),
+                compactionManager.getNumberOfRecordsScanned(),
+                compactionManager.getSizeOfRecordsCopied(),
+                compactionManager.getSizeOfFilesDeleted(),
+                compactionManager.getSizeOfFilesDeleted() - compactionManager.getSizeOfRecordsCopied(),
+                compactionManager.getCompactionJobRateSinceBeginning(),
+                options.clone()
+        );
+    }
+
+    synchronized void resetStats() {
+        inMemoryIndex.resetStats();
+        compactionManager.resetStats();
+        statsResetTime = System.currentTimeMillis();
+    }
+
+    private Map<Integer, Double> computeStaleDataMapForStats() {
+        Map<Integer, Double> stats = new HashMap<>();
+        staleDataPerFileMap.forEach((fileId, staleData) -> {
+            HaloDBFile file = readFileMap.get(fileId);
+            if (file != null && file.getSize() > 0) {
+                double stalePercent = (1.0 * staleData / file.getSize()) * 100;
+                stats.put(fileId, stalePercent);
+            }
+        });
+
+        return stats;
+    }
+
+    // Used only in tests.
+    @VisibleForTesting
+    boolean isCompactionComplete() {
+        return compactionManager.isCompactionComplete();
+    }
+
+    @VisibleForTesting
+    boolean isTombstoneFilesMerging() {
+        return isTombstoneFilesMerging;
     }
 
     class ProcessIndexFileTask implements Callable<Long> {
@@ -589,7 +783,7 @@ class HaloDBInternal {
 
                     // update stale data map for the previous version.
                     addFileToCompactionQueueIfThresholdCrossed(
-                        existing.getFileId(), Utils.getRecordSize(key.length, existing.getValueSize()));
+                            existing.getFileId(), Utils.getRecordSize(key.length, existing.getValueSize()));
                     active++;
 
                     if (options.isCleanUpTombstonesDuringOpen()) {
@@ -600,7 +794,7 @@ class HaloDBInternal {
                 }
             }
             logger.debug("Completed scanning tombstone file {}. Found {} tombstones, {} are still active",
-                tombstoneFile.getName(), count, active);
+                    tombstoneFile.getName(), count, active);
             tombstoneFile.close();
 
             if (options.isCleanUpTombstonesDuringOpen()) {
@@ -617,226 +811,5 @@ class HaloDBInternal {
 
             return maxSequenceNumber;
         }
-    }
-
-    HaloDBFile getHaloDBFile(int fileId) {
-        return readFileMap.get(fileId);
-    }
-
-    void deleteHaloDBFile(int fileId) throws IOException {
-        HaloDBFile file = readFileMap.get(fileId);
-
-        if (file != null) {
-            readFileMap.remove(fileId);
-            file.delete();
-        }
-
-        staleDataPerFileMap.remove(fileId);
-    }
-
-    /**
-     * If options.isCleanUpTombstonesDuringOpen set to true, all inactive entries,
-     * i.e. physically deleted records, will be dropped during db open.
-     * Refer to ProcessTombstoneFileTask class and buildInMemoryIndex()
-     * To shorten db open time, active entries, i.e. not physically deleted
-     * records, in each tombstone file are rolled over to a corresponding
-     * new tombstone file. Therefore, the new tombstone file size might be very
-     * small depends on number of active entries in each tombstone file.
-     * A tombstone file won't be deleted as long as it has at least 1 active
-     * entry. This function provide a way to merge small tombstone files in
-     * offline mode. options.maxTombstoneFileSize still apply to merged file
-     */
-    private void mergeTombstoneFiles() {
-        File[] tombStoneFiles = dbDirectory.listTombstoneFiles();
-
-        logger.info("About to merge {} tombstone files ...", tombStoneFiles.length);
-        TombstoneFile mergedTombstoneFile = null;
-
-        // Use compaction job rate as write rate limiter to avoid IO impact
-        final RateLimiter rateLimiter = RateLimiter.create(options.getCompactionJobRate());
-
-        for (File file : tombStoneFiles) {
-            TombstoneFile tombstoneFile = new TombstoneFile(file, options, dbDirectory);
-            if (currentTombstoneFile != null && tombstoneFile.getName().equals(currentTombstoneFile.getName())) {
-                continue; // not touch current tombstone file
-            }
-
-            try {
-                tombstoneFile.open();
-                TombstoneFile.TombstoneFileIterator iterator = tombstoneFile.newIterator();
-
-                long count = 0;
-                while (iterator.hasNext()) {
-                    TombstoneEntry entry = iterator.next();
-                    rateLimiter.acquire(entry.size());
-                    count++;
-                    mergedTombstoneFile = rollOverTombstoneFile(entry, mergedTombstoneFile);
-                    mergedTombstoneFile.write(entry);
-                }
-                if (count > 0) {
-                    logger.debug("Merged {} tombstones from {} to {}",
-                        count, tombstoneFile.getName(), mergedTombstoneFile.getName());
-                }
-                tombstoneFile.close();
-                tombstoneFile.delete();
-            } catch (IOException e) {
-                logger.error("IO exception when merging tombstone file", e);
-            }
-        }
-
-        logger.info("Tombstone files count, before merge:{}, after merge:{}",
-            tombStoneFiles.length, dbDirectory.listTombstoneFiles().length);
-        isTombstoneFilesMerging = false;
-    }
-
-    private void repairFiles() {
-        getLatestDataFile(HaloDBFile.FileType.DATA_FILE).ifPresent(file -> {
-            try {
-                logger.info("Repairing file {}.data", file.getFileId());
-                HaloDBFile repairedFile = file.repairFile(dbDirectory);
-                readFileMap.put(repairedFile.getFileId(), repairedFile);
-            }
-            catch (IOException e) {
-                throw new RuntimeException("Exception while repairing data file " + file.getFileId() + " which might be corrupted", e);
-            }
-        });
-        getLatestDataFile(HaloDBFile.FileType.COMPACTED_FILE).ifPresent(file -> {
-            try {
-                logger.info("Repairing file {}.datac", file.getFileId());
-                HaloDBFile repairedFile = file.repairFile(dbDirectory);
-                readFileMap.put(repairedFile.getFileId(), repairedFile);
-            }
-            catch (IOException e) {
-                throw new RuntimeException("Exception while repairing datac file " + file.getFileId() + " which might be corrupted", e);
-            }
-        });
-
-        File[] tombstoneFiles = dbDirectory.listTombstoneFiles();
-        if (tombstoneFiles != null && tombstoneFiles.length > 0) {
-            TombstoneFile lastFile = new TombstoneFile(tombstoneFiles[tombstoneFiles.length-1], options, dbDirectory);
-            try {
-                logger.info("Repairing {} file", lastFile.getName());
-                lastFile.open();
-                TombstoneFile repairedFile = lastFile.repairFile(dbDirectory);
-                repairedFile.close();
-            } catch (IOException e) {
-                throw new RuntimeException("Exception while repairing tombstone file " + lastFile.getName() + " which might be corrupted", e);
-            }
-        }
-    }
-
-    private FileLock getLock() throws HaloDBException {
-        try {
-            FileLock lock = FileChannel.open(dbDirectory.getPath().resolve("LOCK"), StandardOpenOption.CREATE, StandardOpenOption.WRITE).tryLock();
-            if (lock == null) {
-                logger.error("Error while opening db. Another process already holds a lock to this db.");
-                throw new HaloDBException("Another process already holds a lock for this db.");
-            }
-
-            return lock;
-        }
-        catch (OverlappingFileLockException e) {
-            logger.error("Error while opening db. Another process already holds a lock to this db.");
-            throw new HaloDBException("Another process already holds a lock for this db.");
-        }
-        catch (IOException e) {
-            logger.error("Error while trying to get a lock on the db.", e);
-            throw new HaloDBException("Error while trying to get a lock on the db.", e);
-        }
-    }
-
-    DBDirectory getDbDirectory() {
-        return dbDirectory;
-    }
-
-    Set<Integer> listDataFileIds() {
-        return new HashSet<>(readFileMap.keySet());
-    }
-
-    boolean isRecordFresh(byte[] key, InMemoryIndexMetaData metaData) {
-        InMemoryIndexMetaData currentMeta = inMemoryIndex.get(key);
-
-        return
-            currentMeta != null
-            &&
-            metaData.getFileId() == currentMeta.getFileId()
-            &&
-            metaData.getValueOffset() == currentMeta.getValueOffset();
-    }
-
-    private long getNextSequenceNumber() {
-        return nextSequenceNumber++;
-    }
-
-    private int getCurrentWriteFileId() {
-        return currentWriteFile != null ? currentWriteFile.getFileId() : -1;
-    }
-
-    private static void checkIfOptionsAreCorrect(HaloDBOptions options) {
-        if (options.isUseMemoryPool() && (options.getFixedKeySize() < 0 || options.getFixedKeySize() > Byte.MAX_VALUE)) {
-            throw new IllegalArgumentException("fixedKeySize must be set and should be less than 128 when using memory pool");
-        }
-    }
-
-    boolean isClosing() {
-        return isClosing;
-    }
-
-    HaloDBStats stats() {
-        OffHeapHashTableStats stats = inMemoryIndex.stats();
-        return new HaloDBStats(
-            statsResetTime,
-            stats.getSize(),
-            compactionManager.isCompactionRunning(),
-            compactionManager.noOfFilesPendingCompaction(),
-            computeStaleDataMapForStats(),
-            stats.getRehashCount(),
-            inMemoryIndex.getNoOfSegments(),
-            inMemoryIndex.getMaxSizeOfEachSegment(),
-            stats.getSegmentStats(),
-            dbDirectory.listDataFiles().length,
-            dbDirectory.listTombstoneFiles().length,
-            noOfTombstonesFoundDuringOpen.get(),
-            options.isCleanUpTombstonesDuringOpen() ?
-                noOfTombstonesFoundDuringOpen.get() - noOfTombstonesCopiedDuringOpen.get() : 0,
-            compactionManager.getNumberOfRecordsCopied(),
-            compactionManager.getNumberOfRecordsReplaced(),
-            compactionManager.getNumberOfRecordsScanned(),
-            compactionManager.getSizeOfRecordsCopied(),
-            compactionManager.getSizeOfFilesDeleted(),
-            compactionManager.getSizeOfFilesDeleted()-compactionManager.getSizeOfRecordsCopied(),
-            compactionManager.getCompactionJobRateSinceBeginning(),
-            options.clone()
-        );
-    }
-
-    synchronized void resetStats() {
-        inMemoryIndex.resetStats();
-        compactionManager.resetStats();
-        statsResetTime = System.currentTimeMillis();
-    }
-
-    private Map<Integer, Double> computeStaleDataMapForStats() {
-        Map<Integer, Double> stats = new HashMap<>();
-        staleDataPerFileMap.forEach((fileId, staleData) -> {
-            HaloDBFile file = readFileMap.get(fileId);
-            if (file != null && file.getSize() > 0) {
-                double stalePercent = (1.0*staleData/file.getSize()) * 100;
-                stats.put(fileId, stalePercent);
-            }
-        });
-
-        return stats;
-    }
-
-    // Used only in tests.
-    @VisibleForTesting
-    boolean isCompactionComplete() {
-        return compactionManager.isCompactionComplete();
-    }
-
-    @VisibleForTesting
-    boolean isTombstoneFilesMerging() {
-        return isTombstoneFilesMerging;
     }
 }

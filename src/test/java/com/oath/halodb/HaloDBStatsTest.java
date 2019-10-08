@@ -175,7 +175,7 @@ public class HaloDBStatsTest extends TestBase {
     public void testIndexStats(HaloDBOptions options) throws HaloDBException {
         String dir = TestUtils.getTestDirectory("HaloDBStatsTest", "testIndexStats");
 
-        int numberOfSegments = (int)Utils.roundUpToPowerOf2(Runtime.getRuntime().availableProcessors() * 2);
+        int numberOfSegments = (int) Utils.roundUpToPowerOf2(Runtime.getRuntime().availableProcessors() * 2);
         int numberOfRecords = numberOfSegments * 1024;
 
         options.setMaxFileSize(10 * 1024);
@@ -186,14 +186,13 @@ public class HaloDBStatsTest extends TestBase {
         HaloDB db = getTestDB(dir, options);
         HaloDBStats stats = db.stats();
         Assert.assertEquals(numberOfSegments, stats.getNumberOfSegments());
-        Assert.assertEquals(numberOfRecords/numberOfSegments, stats.getMaxSizePerSegment());
+        Assert.assertEquals(numberOfRecords / numberOfSegments, stats.getMaxSizePerSegment());
 
         SegmentStats[] expected = new SegmentStats[numberOfSegments];
         SegmentStats s;
         if (options.isUseMemoryPool()) {
             s = new SegmentStats(0, 0, 0, 0);
-        }
-        else {
+        } else {
             s = new SegmentStats(0, -1, -1, -1);
         }
 

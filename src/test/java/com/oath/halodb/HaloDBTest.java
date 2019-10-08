@@ -6,7 +6,8 @@
 package com.oath.halodb;
 
 import com.google.common.primitives.Longs;
-
+import mockit.Mock;
+import mockit.MockUp;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -14,9 +15,6 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-
-import mockit.Mock;
-import mockit.MockUp;
 
 public class HaloDBTest extends TestBase {
 

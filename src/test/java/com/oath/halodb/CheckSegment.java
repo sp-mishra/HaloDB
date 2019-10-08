@@ -11,7 +11,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * On-heap test-only counterpart of {@link SegmentNonMemoryPool} for {@link CheckOffHeapHashTable}.
@@ -31,17 +30,19 @@ final class CheckSegment {
         this.map = new HashMap<>(initialCapacity, loadFactor);
     }
 
-    synchronized void clear()
-    {
+    static long sizeOf(KeyBuffer key, byte[] value) {
+        // calculate the same value as the original impl would do
+        return NonMemoryPoolHashEntries.ENTRY_OFF_DATA + key.size() + value.length;
+    }
+
+    synchronized void clear() {
         map.clear();
         lru.clear();
     }
 
-    synchronized byte[] get(KeyBuffer keyBuffer)
-    {
+    synchronized byte[] get(KeyBuffer keyBuffer) {
         byte[] r = map.get(keyBuffer);
-        if (r == null)
-        {
+        if (r == null) {
             missCount++;
             return null;
         }
@@ -53,14 +54,13 @@ final class CheckSegment {
         return r;
     }
 
-    synchronized boolean put(KeyBuffer keyBuffer, byte[] data, boolean ifAbsent, byte[] old)
-    {
+    synchronized boolean put(KeyBuffer keyBuffer, byte[] data, boolean ifAbsent, byte[] old) {
         byte[] existing = map.get(keyBuffer);
 
         if (ifAbsent && existing != null)
             return false;
 
-        if (old != null && !Arrays.equals(old, existing))  {
+        if (old != null && !Arrays.equals(old, existing)) {
             return false;
         }
 
@@ -68,21 +68,17 @@ final class CheckSegment {
         lru.remove(keyBuffer);
         lru.addFirst(keyBuffer);
 
-        if (existing != null)
-        {
+        if (existing != null) {
             putReplaceCount++;
-        }
-        else
+        } else
             putAddCount++;
 
         return true;
     }
 
-    synchronized boolean remove(KeyBuffer keyBuffer)
-    {
+    synchronized boolean remove(KeyBuffer keyBuffer) {
         byte[] old = map.remove(keyBuffer);
-        if (old != null)
-        {
+        if (old != null) {
             boolean r = lru.remove(keyBuffer);
             removeCount++;
             return r;
@@ -90,19 +86,11 @@ final class CheckSegment {
         return false;
     }
 
-    synchronized long size()
-    {
+    synchronized long size() {
         return map.size();
     }
 
-    static long sizeOf(KeyBuffer key, byte[] value)
-    {
-        // calculate the same value as the original impl would do
-        return NonMemoryPoolHashEntries.ENTRY_OFF_DATA + key.size() + value.length;
-    }
-
-    void resetStatistics()
-    {
+    void resetStatistics() {
         evictedEntries = 0L;
         hitCount = 0L;
         missCount = 0L;

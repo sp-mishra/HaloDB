@@ -22,21 +22,23 @@ import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 class TombstoneFile {
+    static final String TOMBSTONE_FILE_NAME = ".tombstone";
     private static final Logger logger = LoggerFactory.getLogger(TombstoneFile.class);
-
+    private static final String nullMessage = "Tombstone entry cannot be null";
     private final File backingFile;
-    private FileChannel channel;
     private final DBDirectory dbDirectory;
-
     private final HaloDBOptions options;
-
+    private FileChannel channel;
     private long unFlushedData = 0;
     private long writeOffset = 0;
 
-    static final String TOMBSTONE_FILE_NAME = ".tombstone";
-    private static final String nullMessage = "Tombstone entry cannot be null";
+    TombstoneFile(File backingFile, HaloDBOptions options, DBDirectory dbDirectory) {
+        this.backingFile = backingFile;
+        this.options = options;
+        this.dbDirectory = dbDirectory;
+    }
 
-    static TombstoneFile create(DBDirectory dbDirectory, int fileId, HaloDBOptions options)  throws IOException {
+    static TombstoneFile create(DBDirectory dbDirectory, int fileId, HaloDBOptions options) throws IOException {
         File file = getTombstoneFile(dbDirectory, fileId);
 
         while (!file.createNewFile()) {
@@ -51,10 +53,8 @@ class TombstoneFile {
         return tombstoneFile;
     }
 
-    TombstoneFile(File backingFile, HaloDBOptions options, DBDirectory dbDirectory) {
-        this.backingFile = backingFile;
-        this.options = options;
-        this.dbDirectory = dbDirectory;
+    private static File getTombstoneFile(DBDirectory dbDirectory, int fileId) {
+        return dbDirectory.getPath().resolve(fileId + TOMBSTONE_FILE_NAME).toFile();
     }
 
     void open() throws IOException {
@@ -129,15 +129,15 @@ class TombstoneFile {
         logger.info("Recovered {} records from file {} with size {}. Size after repair {}.", count, getName(), getSize(), repairFile.getSize());
         repairFile.flushToDisk();
         Files.move(repairFile.getPath(), getPath(), REPLACE_EXISTING, ATOMIC_MOVE);
-        dbDirectory.syncMetaData();  
+        dbDirectory.syncMetaData();
         repairFile.close();
         close();
         open();
         return this;
     }
 
-    private TombstoneFile createRepairFile()  throws IOException {
-        File repairFile = dbDirectory.getPath().resolve(getName()+".repair").toFile();
+    private TombstoneFile createRepairFile() throws IOException {
+        File repairFile = dbDirectory.getPath().resolve(getName() + ".repair").toFile();
         while (!repairFile.createNewFile()) {
             logger.info("Repair file {} already exists, probably from a previous repair which failed. Deleting a trying again", repairFile.getName());
             repairFile.delete();
@@ -169,10 +169,6 @@ class TombstoneFile {
         return new TombstoneFile.TombstoneFileIterator(true);
     }
 
-    private static File getTombstoneFile(DBDirectory dbDirectory, int fileId) {
-        return dbDirectory.getPath().resolve(fileId + TOMBSTONE_FILE_NAME).toFile();
-    }
-
     class TombstoneFileIterator implements Iterator<TombstoneEntry> {
 
         private final ByteBuffer buffer;
@@ -193,7 +189,7 @@ class TombstoneFile {
             if (hasNext()) {
                 if (discardCorruptedRecords)
                     return TombstoneEntry.deserializeIfNotCorrupted(buffer);
-                
+
                 return TombstoneEntry.deserialize(buffer);
             }
 

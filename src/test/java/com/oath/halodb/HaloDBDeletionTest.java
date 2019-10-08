@@ -9,11 +9,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 public class HaloDBDeletionTest extends TestBase {
 
@@ -39,8 +35,7 @@ public class HaloDBDeletionTest extends TestBase {
 
             if (i % 2 == 0) {
                 Assert.assertNull(actual);
-            }
-            else {
+            } else {
                 Assert.assertEquals(records.get(i).getValue(), actual);
             }
         }
@@ -61,8 +56,7 @@ public class HaloDBDeletionTest extends TestBase {
         for (int i = 0; i < records.size(); i++) {
             if (i % 2 == 0) {
                 db.delete(records.get(i).getKey());
-            }
-            else {
+            } else {
                 expected.add(records.get(i));
             }
         }
@@ -95,8 +89,7 @@ public class HaloDBDeletionTest extends TestBase {
 
             if (i % 2 == 0) {
                 Assert.assertNull(actual);
-            }
-            else {
+            } else {
                 Assert.assertEquals(records.get(i).getValue(), actual);
             }
         }
@@ -153,8 +146,7 @@ public class HaloDBDeletionTest extends TestBase {
 
             if (i % 2 == 0) {
                 Assert.assertNull(actual);
-            }
-            else {
+            } else {
                 Assert.assertEquals(records.get(i).getValue(), actual);
             }
         }
@@ -205,8 +197,7 @@ public class HaloDBDeletionTest extends TestBase {
 
             if (deleted.contains(i)) {
                 Assert.assertNull(actual);
-            }
-            else {
+            } else {
                 Assert.assertEquals(records.get(i).getValue(), actual);
             }
         }

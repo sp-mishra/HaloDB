@@ -5,6 +5,9 @@
 
 package com.oath.halodb;
 
+import mockit.Invocation;
+import mockit.Mock;
+import mockit.MockUp;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.testng.Assert;
@@ -15,10 +18,6 @@ import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-
-import mockit.Invocation;
-import mockit.Mock;
-import mockit.MockUp;
 
 public class HaloDBIteratorTest extends TestBase {
 
@@ -34,7 +33,7 @@ public class HaloDBIteratorTest extends TestBase {
 
     @Test(dataProvider = "Options")
     public void testWithDelete(HaloDBOptions options) throws HaloDBException {
-        String directory =  TestUtils.getTestDirectory("HaloDBIteratorTest", "testWithEmptyDB");
+        String directory = TestUtils.getTestDirectory("HaloDBIteratorTest", "testWithEmptyDB");
 
         options.setCompactionDisabled(true);
 
@@ -129,12 +128,12 @@ public class HaloDBIteratorTest extends TestBase {
         final HaloDB db = getTestDB(directory, options);
 
         // insert 1024 records per file, and a total of 10 files.
-        int noOfRecords = 10*1024;
-        List<Record> records = TestUtils.insertRandomRecordsOfSize(db, noOfRecords, 1024-Record.Header.HEADER_SIZE);
+        int noOfRecords = 10 * 1024;
+        List<Record> records = TestUtils.insertRandomRecordsOfSize(db, noOfRecords, 1024 - Record.Header.HEADER_SIZE);
 
         int noOfUpdateRuns = 10;
         Thread updateThread = new Thread(() -> {
-            for (int i=0; i<noOfUpdateRuns; i++) {
+            for (int i = 0; i < noOfUpdateRuns; i++) {
                 TestUtils.updateRecordsWithSize(db, records, 1024);
             }
         });
@@ -175,11 +174,11 @@ public class HaloDBIteratorTest extends TestBase {
         final HaloDB db = getTestDB(directory, options);
 
         int noOfRecords = 4; // 2 records on 2 files. 
-        List<Record> records = TestUtils.insertRandomRecordsOfSize(db, noOfRecords, 1024-Record.Header.HEADER_SIZE);
+        List<Record> records = TestUtils.insertRandomRecordsOfSize(db, noOfRecords, 1024 - Record.Header.HEADER_SIZE);
 
         int noOfUpdateRuns = 1000;
         Thread updateThread = new Thread(() -> {
-            for (int i=0; i<noOfUpdateRuns; i++) {
+            for (int i = 0; i < noOfUpdateRuns; i++) {
                 TestUtils.updateRecordsWithSize(db, records, 1024);
             }
         });
@@ -219,11 +218,11 @@ public class HaloDBIteratorTest extends TestBase {
         final HaloDB db = getTestDB(directory, options);
 
         int noOfRecords = 50; // 50 records on 5 files.
-        List<Record> records = TestUtils.insertRandomRecordsOfSize(db, noOfRecords, 1024-Record.Header.HEADER_SIZE);
+        List<Record> records = TestUtils.insertRandomRecordsOfSize(db, noOfRecords, 1024 - Record.Header.HEADER_SIZE);
 
         int noOfUpdateRuns = 100;
         Thread updateThread = new Thread(() -> {
-            for (int i=0; i<noOfUpdateRuns; i++) {
+            for (int i = 0; i < noOfUpdateRuns; i++) {
                 TestUtils.updateRecordsWithSize(db, records, 1024);
             }
         });
